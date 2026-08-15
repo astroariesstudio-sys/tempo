@@ -374,49 +374,6 @@ function save(){
   saveErr = !uspeh;
 }
 
-/* -------------------------------------------------------------------------
-   Jednokratni uvoz: 3–14.08.2026. iz sveske (samo ukupne stavke i čekanje).
-   Zone su procena — dominantna zona po danu + oko 10% smene u FT.
-   Kartica se sama sklanja posle uvoza ili odbijanja.
-   ------------------------------------------------------------------------- */
-var AVGUST = [
- {d:3, z:"F6", pz:567, pf:59,  cek:0},
- {d:4, z:"F6", pz:599, pf:63,  cek:12},
- {d:5, z:"F6", pz:541, pf:57,  cek:61},
- {d:6, z:"F7", pz:590, pf:47,  cek:20},
- {d:7, z:"F7", pz:617, pf:49,  cek:10},
- {d:10,z:"F6", pz:572, pf:60,  cek:19},
- {d:11,z:"F7", pz:678, pf:54,  cek:26},
- {d:12,z:"F7", pz:626, pf:50,  cek:11},
- {d:13,z:"F6", pz:608, pf:63,  cek:28},
- {d:14,z:"F7", pz:654, pf:53,  cek:23}
-];
-function uveziAvgust(){
-  var M=60000, dodato=0, i, postoji={};
-  for(i=0;i<S.dani.length;i++) postoji[S.dani[i].datum]=true;
-  for(i=0;i<AVGUST.length;i++){
-    var r=AVGUST[i];
-    var poc=new Date(2026,7,r.d,6,0,0,0).getTime(), traj=480;
-    var kljuc=danKljuc(poc);
-    if(postoji[kljuc]) continue;
-    var min=traj-r.cek, tFT=Math.round(min*0.10), tZ=min-tFT;
-    var t1=poc+(r.cek+tZ)*M;
-    var ev=[{tip:"zona",zona:r.z,t:poc},{tip:"nalog_poc",t:poc,poz:r.pz,id:"a"+r.d}];
-    if(r.cek>0){ ev.push({tip:"cekanje",t:poc+M,kod:"",id:"c"+r.d});
-                 ev.push({tip:"nastavak",t:poc+M+r.cek*M}); }
-    ev.push({tip:"nalog",t:t1,zona:r.z,poz:r.pz,id:"an"+r.d});
-    ev.push({tip:"zona",zona:"FT",t:t1});
-    ev.push({tip:"nalog_poc",t:t1,poz:r.pf,id:"b"+r.d});
-    ev.push({tip:"nalog",t:poc+traj*M,zona:"FT",poz:r.pf,id:"bn"+r.d});
-    S.dani.push({datum:kljuc, smena:"Prva", pocetak:poc, kraj_plan:poc+traj*M,
-                 kraj:poc+traj*M, kasnjenje:0, rucno:true, dogadjaji:ev});
-    dodato++;
-  }
-  S.dani.sort(function(a,b){ return a.pocetak-b.pocetak; });
-  S.avgustUvezen = true; mesecIzbor=null; save(); tab="mesec"; render();
-  poruka(dodato ? "Upisano "+dodato+" dana" : "Ti dani već postoje");
-}
-
 /* =========================================================================
    POMOĆNE
    ========================================================================= */
@@ -814,18 +771,6 @@ function viewStart(){
   var h="", i;
 
   h += '<div class="stack">';
-
-  /* jednokratni uvoz avgusta iz sveske */
-  if(!S.avgustUvezen){
-    h += '<div class="card stack" style="border-color:var(--accent)">'
-      +  '<div class="lbl" style="color:var(--accent)">Avgust iz sveske</div>'
-      +  '<div class="small">Deset radnih dana, <b>3–14. avgust</b>, po tvom zapisu: ukupne stavke i čekanje. '
-      +  'Zone su procena — ona u kojoj si tog dana najviše radio, plus oko desetine smene u FT.</div>'
-      +  '<div class="row" style="gap:8px">'
-      +   '<button class="btn main" style="flex:2;min-height:50px" data-act="uvezi-avgust">Upiši tih 10 dana</button>'
-      +   '<button class="btn ghost" style="flex:1;min-height:50px" data-act="preskoci-avgust">Ne treba</button>'
-      +  '</div></div>';
-  }
 
   /* smena koja je ostala otvorena pa je sama zatvorena — traži potvrdu da nije greška */
   var zao = null;
@@ -1628,8 +1573,6 @@ document.addEventListener("click", function(ev){
     else { zonaIzbor = el.dataset.z; }
     sheet=null; render(); return;
   }
-  if(a==="uvezi-avgust"){ uveziAvgust(); return; }
-  if(a==="preskoci-avgust"){ S.avgustUvezen=true; save(); render(); return; }
   if(a==="izbor-zone"){ zonaIzbor = el.dataset.z; sheet=null; render(); return; }
   if(a==="start-smene"){ pocniSmenu(zonaIzbor || S.aktivne[0] || "F6"); return; }
   if(a==="odakle-pocetak" || a==="odakle-sada"){
