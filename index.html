@@ -1,0 +1,1901 @@
+<title>Tempo smene</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#101317">
+
+<style>
+/* ============ TOKENS — dark je podrazumevani (radna hala, noćna smena) ============ */
+:root{
+  --bg:#101317; --surface:#181C22; --surface2:#20252C; --line:#2C333C;
+  --ink:#E9ECEF; --muted:#939CA8; --dim:#6A737F;
+  --accent:#F7A81B; --accent-ink:#15171A; --accent-soft:#3A2C0E;
+  --good:#3FCB86; --good-soft:#12301F;
+  --bad:#FF5C47;  --bad-soft:#381813;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+  --r:14px;
+  --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-num:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F1F0EC; --surface:#FFFFFF; --surface2:#E8E7E1; --line:#D9D6CD;
+    --ink:#171A1E; --muted:#6E6A62; --dim:#8B877E;
+    --accent:#B87400; --accent-ink:#FFFFFF; --accent-soft:#FBEBCE;
+    --good:#0E7A52; --good-soft:#DCF0E5;
+    --bad:#C0341D;  --bad-soft:#FBE2DC;
+    --shadow:0 8px 24px rgba(60,50,30,.12);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F1F0EC; --surface:#FFFFFF; --surface2:#E8E7E1; --line:#D9D6CD;
+  --ink:#171A1E; --muted:#6E6A62; --dim:#8B877E;
+  --accent:#B87400; --accent-ink:#FFFFFF; --accent-soft:#FBEBCE;
+  --good:#0E7A52; --good-soft:#DCF0E5;
+  --bad:#C0341D;  --bad-soft:#FBE2DC;
+  --shadow:0 8px 24px rgba(60,50,30,.12);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+  font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:contain;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.app{max-width:520px;margin:0 auto;padding:0 14px;
+     padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.app.nobar{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+
+/* ============ HEADER ============ */
+.top{display:flex;align-items:center;gap:11px;padding:calc(12px + env(safe-area-inset-top)) 2px 10px}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--accent);flex:none;
+      display:grid;place-items:center;color:var(--accent-ink);font-weight:800;font-size:15px;
+      font-family:var(--font-num)}
+.top h1{margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.top .sub{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.top .sp{flex:1}
+.icon{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
+      background:var(--surface);display:grid;place-items:center;font-size:15px}
+
+/* ============ TABS ============ */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;background:var(--surface2);
+      padding:3px;border-radius:11px;margin-bottom:14px}
+.tabs button{padding:8px 4px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);
+             letter-spacing:.01em}
+.tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* ============ BUILDING BLOCKS ============ */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.stack{display:flex;flex-direction:column;gap:11px}
+.lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row{display:flex;align-items:center;gap:10px}
+.sp{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.tiny{font-size:11.5px}
+
+/* HERO — glavni pokazatelj */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.hero .body{padding:15px 15px 13px}
+.hero .big{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+           font-size:56px;line-height:.95;font-weight:600;letter-spacing:-.035em;display:flex;
+           align-items:baseline;gap:6px}
+.hero .big .u{font-size:19px;font-weight:600;letter-spacing:0}
+.hero.up .big{color:var(--good)} .hero.down .big{color:var(--bad)}
+.hero .cmp{display:flex;gap:18px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
+.hero .cmp div{display:flex;flex-direction:column;gap:1px}
+.hero .cmp b{font-family:var(--font-num);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.gauge{height:5px;background:var(--surface2);position:relative}
+.gauge i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.hero.up .gauge i{background:var(--good)} .hero.down .gauge i{background:var(--bad)}
+
+/* CILJ */
+.goal{border-radius:var(--r);padding:13px 15px;border:1px solid transparent}
+.goal.need{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 34%,transparent)}
+.goal.ok{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 34%,transparent)}
+.goal .n{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:34px;
+         font-weight:600;letter-spacing:-.03em;line-height:1.05}
+.goal.need .n{color:var(--accent)} .goal.ok .n{color:var(--good)}
+.goal .cap{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+/* ZONE */
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+.zones{display:flex;flex-wrap:wrap;gap:7px}
+.z{padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:var(--surface);
+   display:flex;flex-direction:column;gap:1px;min-width:76px}
+.z .k{font-family:var(--font-num);font-weight:700;font-size:15px;letter-spacing:.01em}
+.z .v{font-size:11px;color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.z.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.z.on .v{color:color-mix(in srgb,var(--accent-ink) 72%,transparent)}
+.z .v.g{color:var(--good)} .z .v.b{color:var(--bad)}
+.z.on .v.g,.z.on .v.b{color:color-mix(in srgb,var(--accent-ink) 78%,transparent)}
+.zmore{padding:9px 12px;border-radius:11px;border:1px dashed var(--line);color:var(--muted);font-size:13px}
+
+/* STANJE ČEKANJA */
+.waitbox{background:var(--bad-soft);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);
+         border-radius:var(--r);padding:13px 15px;display:flex;align-items:center;gap:12px}
+.waitbox .n{font-family:var(--font-num);font-size:30px;font-weight:600;color:var(--bad);
+            font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none;animation:bl 1.4s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+
+/* AKCIONA TRAKA */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;
+     background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);
+     border-top:1px solid var(--line);
+     padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.bar .in{max-width:520px;margin:0 auto;display:flex;gap:8px;align-items:stretch}
+.btn{border-radius:13px;font-weight:700;display:grid;place-items:center;text-align:center;
+     border:1px solid var(--line);background:var(--surface);padding:0 14px;min-height:58px;font-size:14.5px}
+.btn.main{flex:1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:17px;
+          letter-spacing:.01em}
+.btn.stop{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.wide{width:100%}
+.btn.ghost{background:var(--surface)}
+.btn:disabled{opacity:.4}
+.btn.tiho{opacity:.42}
+.btn.sq{width:58px;padding:0;font-size:19px}
+
+/* TABELA */
+table{width:100%;border-collapse:collapse;font-size:13px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+   font-weight:600;padding:0 0 7px;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 0;border-top:1px solid var(--line);text-align:right;white-space:nowrap;
+   font-family:var(--font-num);font-variant-numeric:tabular-nums}
+td:first-child{font-weight:700}
+th+th,td+td{padding-left:12px}
+.g{color:var(--good)} .b{color:var(--bad)}
+
+/* LISTA NALOGA */
+.ord{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.ord .t{font-family:var(--font-num);color:var(--muted);font-size:13px;width:46px}
+.ord .zn{font-family:var(--font-num);font-weight:700;font-size:13px;width:30px}
+.ord .p{font-family:var(--font-num);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.ord .x{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);display:grid;
+        place-items:center;color:var(--muted);font-size:14px}
+.ev{font-size:12px;color:var(--muted);padding:6px 0;border-top:1px dashed var(--line);
+    display:flex;gap:9px}
+.ev span{font-family:var(--font-num)}
+
+/* OVERLAY / KEYPAD / SHEET */
+.ov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;
+    justify-content:center}
+.ov .pan{width:100%;max-width:520px;background:var(--surface);border-radius:20px 20px 0 0;
+         padding:16px 14px calc(16px + env(safe-area-inset-bottom));box-shadow:var(--shadow);
+         border-top:1px solid var(--line)}
+.kdisp{display:flex;align-items:baseline;justify-content:center;gap:9px;padding:6px 0 16px}
+.kdisp .v{font-family:var(--font-num);font-size:60px;font-weight:600;letter-spacing:-.04em;
+          font-variant-numeric:tabular-nums;line-height:1}
+.kdisp .z{font-family:var(--font-num);font-size:17px;font-weight:700;color:var(--accent)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad button{min-height:62px;border-radius:13px;background:var(--surface2);font-size:25px;
+            font-weight:600;font-family:var(--font-num)}
+.pad button.ok{background:var(--accent);color:var(--accent-ink);font-size:22px;font-family:var(--font-ui);
+               font-weight:700}
+.pad button.del{font-size:20px}
+.menu{display:flex;flex-direction:column;gap:2px}
+.menu button{text-align:left;padding:15px 12px;border-radius:11px;font-size:15.5px;font-weight:600;
+             display:flex;gap:11px;align-items:center}
+.menu button:active{background:var(--surface2)}
+.menu button.danger{color:var(--bad)}
+.menu .ic{width:24px;text-align:center;font-size:16px}
+
+/* FORME */
+.f{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.f label{flex:1;font-size:14px}
+.f input,.f select{background:var(--surface2);border:1px solid var(--line);border-radius:9px;
+        padding:9px 11px;width:112px;text-align:right;font-family:var(--font-num);
+        font-variant-numeric:tabular-nums;font-size:15px}
+.f input[type=time]{width:118px}
+.f input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
+textarea{width:100%;min-height:110px;background:var(--surface2);border:1px solid var(--line);
+         border-radius:10px;padding:10px;font-family:var(--font-num);font-size:11.5px;color:var(--ink);
+         resize:vertical}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;
+      background:var(--surface2);font-size:11.5px;font-weight:600;color:var(--muted)}
+.chip.on{background:var(--accent);color:var(--accent-ink)}
+h2.sec{font-size:13px;font-weight:700;margin:2px 0 0;letter-spacing:.01em}
+.warn{background:var(--bad-soft);border:1px solid var(--bad);border-radius:11px;padding:10px 12px;
+      font-size:13px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom));
+       background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13.5px;
+       font-weight:600;z-index:80;box-shadow:var(--shadow)}
+.empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:14px}
+</style>
+
+<div class="app" id="app">
+  <div class="top">
+    <div class="mark">T</div>
+    <div>
+      <h1>Tempo smene</h1>
+      <div class="sub" id="sub">komisioniranje</div>
+    </div>
+    <div class="sp"></div>
+    <button class="icon" id="themeBtn" aria-label="Svetla ili tamna tema">◐</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button data-tab="smena" class="on">Smena</button>
+    <button data-tab="dan">Dan</button>
+    <button data-tab="mesec">Mesec</button>
+    <button data-tab="norme">Norme</button>
+  </div>
+  <div id="view"></div>
+</div>
+<div id="bar"></div>
+<div id="ov"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   MODEL
+   ========================================================================= */
+var KEY = "tempo_smene_v1";
+var DEF_NORME = {F1:117,F2:117,F3:54,F6:81,F7:106,FT:76,FM:35,FS:135,KD:280};
+var DEF_AKTIVNE = ["F6","F7","FT"];
+
+var DEF_SMENE = [{ime:"Prva", poc:"06:00", kraj:"14:00"},
+                 {ime:"Druga", poc:"14:00", kraj:"22:00"}];
+
+var S = {
+  norme: Object.assign({},DEF_NORME),
+  aktivne: DEF_AKTIVNE.slice(),
+  smeneDef: DEF_SMENE.map(function(x){ return Object.assign({},x); }),
+  pragPrazan: 5,          // minuta praznog hoda posle kojih ekran upozorava
+  pauzaFond: 60,          // minuta pauze po smeni, može iz više delova
+  tema: null,
+  smena: null,            // {datum,pocetak,kraj_plan,kraj,dogadjaji:[]}
+  dani: [],               // zavrsene smene
+  greske: {}              // {"2026-07": {kontrolisane, greske}}
+};
+var tab = "smena", sheet = null, keypad = null, saveErr = false,
+    mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
+    pitanje = null, tekstZaPrikaz = null;
+
+/* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
+   pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
+function pitaj(tekst, dugme, akcija){
+  pitanje = {tekst:tekst, dugme:dugme, akcija:akcija};
+  sheet = "pitanje"; keypad = null; render();
+}
+
+/* smena kojoj pripada dati unos — da se briše i ispravlja i posle zatvaranja dana */
+function smenaPoUnosu(id){
+  var svi = sveSmene(), i, j;
+  for(i=0;i<svi.length;i++)
+    for(j=0;j<svi[i].dogadjaji.length;j++)
+      if(svi[i].dogadjaji[j].id===id) return svi[i];
+  return null;
+}
+/* smena po vremenu početka */
+function smenaPoPocetku(p){
+  var svi=sveSmene(), i;
+  for(i=0;i<svi.length;i++) if(svi[i].pocetak===p) return svi[i];
+  return null;
+}
+/* smena koja se gleda u kartici Dan */
+function smenaZaPrikaz(){
+  var svi = sveSmene(), i;
+  if(danIzbor!=null)
+    for(i=0;i<svi.length;i++) if(svi[i].pocetak===danIzbor) return svi[i];
+  if(S.smena) return S.smena;
+  return S.dani.length ? S.dani[S.dani.length-1] : null;
+}
+
+/* trenutak na dan od `ts`, u „HH:MM" */
+function tsNaDan(ts, hhmm){
+  var p = String(hhmm||"06:00").split(":"), d = new Date(ts);
+  d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
+  return d.getTime();
+}
+/* koja je smena na redu — ona čiji je zvanični početak najbliži sadašnjem trenutku */
+function predlozenaSmena(sada){
+  var naj=0, razlika=Infinity, i, d;
+  for(i=0;i<S.smeneDef.length;i++){
+    d = Math.abs(sada - tsNaDan(sada, S.smeneDef[i].poc));
+    if(d < razlika){ razlika = d; naj = i; }
+  }
+  return naj;
+}
+function izabranaSmena(sada){
+  if(smenaIzbor!=null && S.smeneDef[smenaIzbor]) return smenaIzbor;
+  return predlozenaSmena(sada);
+}
+function trajanjeSmene(def){
+  var p=tsNaDan(0,def.poc), k=tsNaDan(0,def.kraj);
+  if(k<=p) k += 24*3600000;
+  return (k-p)/60000;
+}
+
+/* sve smene, uključujući onu u toku */
+function sveSmene(){
+  var a = S.dani.slice();
+  if(S.smena) a.push(S.smena);
+  return a;
+}
+/* meseci u kojima ima smena, najnoviji prvi */
+function mesecniKljucevi(){
+  var svi = sveSmene(), m = {}, i;
+  for(i=0;i<svi.length;i++) m[mesKljuc(svi[i].datum)] = true;
+  return Object.keys(m).sort().reverse();
+}
+/* izabrani mesec — uvek važeći, bez obzira šta je do sada prikazano */
+function aktivanMesec(){
+  var k = mesecniKljucevi();
+  if(!k.length) return null;
+  if(!mesecIzbor || k.indexOf(mesecIzbor) < 0) mesecIzbor = k[0];
+  return mesecIzbor;
+}
+
+function citaj(store){
+  try{ return store ? store.getItem(KEY) : null; }catch(e){ return null; }
+}
+function load(){
+  var raw = citaj(window.localStorage) || citaj(window.sessionStorage);
+  try{
+    if(raw){ var d = JSON.parse(raw); for(var k in d) if(d[k]!==undefined) S[k]=d[k]; }
+  }catch(e){}
+  if(!S.norme) S.norme = Object.assign({},DEF_NORME);
+  if(!Array.isArray(S.aktivne)||!S.aktivne.length) S.aktivne = DEF_AKTIVNE.slice();
+  if(!Array.isArray(S.smeneDef)||!S.smeneDef.length)
+    S.smeneDef = DEF_SMENE.map(function(x){ return Object.assign({},x); });
+  if(!Array.isArray(S.dani)) S.dani = [];
+  if(!S.greske) S.greske = {};
+  zatvoriZaostalu();
+  save();                                  // odmah proveri da li telefon uopšte dozvoljava čuvanje
+}
+
+/* Smena zaboravljena otvorena se sama zatvara na svom planiranom kraju.
+   Bez ovoga bi danima brojala minute i pokvarila i dan i mesec. */
+function zatvoriZaostalu(){
+  var sm = S.smena;
+  if(!sm || !sm.kraj_plan) return;
+  if(Date.now() <= sm.kraj_plan + 60*60000) return;      // sat vremena tolerancije
+  if(ceka(sm))    sm.dogadjaji.push({tip:"nastavak",   t:sm.kraj_plan});
+  if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze", t:sm.kraj_plan});
+  sm.kraj = sm.kraj_plan;
+  sm.autoZatvorena = true;
+  S.dani.push(sm);
+  S.smena = null;
+}
+function save(){
+  var txt;
+  try{ txt = JSON.stringify(S); }catch(e){ return; }
+  var uspeh = false;
+  try{ window.localStorage.setItem(KEY, txt); uspeh = true; }catch(e){}
+  try{ window.sessionStorage.setItem(KEY, txt); uspeh = true; }catch(e){}
+  saveErr = !uspeh;
+}
+
+/* -------------------------------------------------------------------------
+   Jednokratni uvoz: 3–14.08.2026. iz sveske (samo ukupne stavke i čekanje).
+   Zone su procena — dominantna zona po danu + oko 10% smene u FT.
+   Kartica se sama sklanja posle uvoza ili odbijanja.
+   ------------------------------------------------------------------------- */
+var AVGUST = [
+ {d:3, z:"F6", pz:567, pf:59,  cek:0},
+ {d:4, z:"F6", pz:599, pf:63,  cek:12},
+ {d:5, z:"F6", pz:541, pf:57,  cek:61},
+ {d:6, z:"F7", pz:590, pf:47,  cek:20},
+ {d:7, z:"F7", pz:617, pf:49,  cek:10},
+ {d:10,z:"F6", pz:572, pf:60,  cek:19},
+ {d:11,z:"F7", pz:678, pf:54,  cek:26},
+ {d:12,z:"F7", pz:626, pf:50,  cek:11},
+ {d:13,z:"F6", pz:608, pf:63,  cek:28},
+ {d:14,z:"F7", pz:654, pf:53,  cek:23}
+];
+function uveziAvgust(){
+  var M=60000, dodato=0, i, postoji={};
+  for(i=0;i<S.dani.length;i++) postoji[S.dani[i].datum]=true;
+  for(i=0;i<AVGUST.length;i++){
+    var r=AVGUST[i];
+    var poc=new Date(2026,7,r.d,6,0,0,0).getTime(), traj=480;
+    var kljuc=danKljuc(poc);
+    if(postoji[kljuc]) continue;
+    var min=traj-r.cek, tFT=Math.round(min*0.10), tZ=min-tFT;
+    var t1=poc+(r.cek+tZ)*M;
+    var ev=[{tip:"zona",zona:r.z,t:poc},{tip:"nalog_poc",t:poc,poz:r.pz,id:"a"+r.d}];
+    if(r.cek>0){ ev.push({tip:"cekanje",t:poc+M,kod:"",id:"c"+r.d});
+                 ev.push({tip:"nastavak",t:poc+M+r.cek*M}); }
+    ev.push({tip:"nalog",t:t1,zona:r.z,poz:r.pz,id:"an"+r.d});
+    ev.push({tip:"zona",zona:"FT",t:t1});
+    ev.push({tip:"nalog_poc",t:t1,poz:r.pf,id:"b"+r.d});
+    ev.push({tip:"nalog",t:poc+traj*M,zona:"FT",poz:r.pf,id:"bn"+r.d});
+    S.dani.push({datum:kljuc, smena:"Prva", pocetak:poc, kraj_plan:poc+traj*M,
+                 kraj:poc+traj*M, kasnjenje:0, rucno:true, dogadjaji:ev});
+    dodato++;
+  }
+  S.dani.sort(function(a,b){ return a.pocetak-b.pocetak; });
+  S.avgustUvezen = true; mesecIzbor=null; save(); tab="mesec"; render();
+  poruka(dodato ? "Upisano "+dodato+" dana" : "Ti dani već postoje");
+}
+
+/* =========================================================================
+   POMOĆNE
+   ========================================================================= */
+function br(v,d){ d = (d===undefined?1:d);
+  if(v==null || typeof v!=="number" || !isFinite(v)) return "—";
+  return v.toLocaleString("sr-RS",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function cel(v){ if(v==null || typeof v!=="number" || !isFinite(v)) return "—";
+  return Math.round(v).toLocaleString("sr-RS"); }
+/* procenat sa predznakom — prazno dok nema dovoljno izmerenog vremena */
+function pct(v,d){ return (v==null || !isFinite(v)) ? "—" : (v>=0?"+":"")+br(v,d===undefined?1:d)+"%"; }
+function kl(v){ return (v==null || !isFinite(v)) ? "" : (v>=0?"g":"b"); }
+function sat(ts){ var d=new Date(ts);
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function danKljuc(ts){ var d=new Date(ts);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function mesKljuc(k){ return k.slice(0,7); }
+function trajanje(min){
+  min = Math.max(0,Math.round(min));
+  var h=Math.floor(min/60), m=min%60;
+  return h? h+" h "+String(m).padStart(2,"0")+" min" : m+" min";
+}
+function kratko(min){
+  min = Math.max(0,Math.round(min));
+  return Math.floor(min/60)+":"+String(min%60).padStart(2,"0");
+}
+var MESECI = ["januar","februar","mart","april","maj","jun","jul","avgust","septembar","oktobar","novembar","decembar"];
+function imeMeseca(mk){ var p=mk.split("-"); return MESECI[parseInt(p[1],10)-1]+" "+p[0]; }
+function datumTekst(k){ var p=k.split("-");
+  return parseInt(p[2],10)+". "+MESECI[parseInt(p[1],10)-1]; }
+function preklop(a1,a2,b1,b2){ return Math.max(0, Math.min(a2,b2)-Math.max(a1,b1)); }
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+
+/* =========================================================================
+   OBRAČUN — tačno po metodologiji sa izveštaja
+   minuti zone = vreme u zoni − čekanje (pauza OSTAJE unutra)
+   ostvareni = pozicije / minuti × 60
+   traženi   = ukupne pozicije / Σ(pozicije_zone / norma_zone) ... u satima
+   razlika % = ostvareni / traženi − 1
+   ========================================================================= */
+function razlozi(sm, sada){
+  var kraj = sm.kraj || sada;
+  var segs=[], cek=[], pau=[], praz=[], nal=[],
+      cur=null, cw=null, cp=null, cpr=null, cn=null, uNal=false, i, e;
+  for(i=0;i<sm.dogadjaji.length;i++){
+    e = sm.dogadjaji[i];
+    if(e.tip==="zona"){ if(cur) cur.kraj=e.t; cur={zona:e.zona,poc:e.t,kraj:null}; segs.push(cur); }
+    else if(e.tip==="cekanje"){ if(!cw){ cw={poc:e.t,kraj:null,kod:e.kod||"",id:e.id,zona:trenutnaZonaDo(sm,e.t)}; cek.push(cw);} }
+    else if(e.tip==="nastavak"){ if(cw){ cw.kraj=e.t; cw=null; } }
+    else if(e.tip==="pauza"){ if(!cp){ cp={poc:e.t,kraj:null}; pau.push(cp);} }
+    else if(e.tip==="kraj_pauze"){ if(cp){ cp.kraj=e.t; cp=null; } }
+    /* prazan hod = od zatvaranja naloga do uzimanja sledećeg */
+    else if(e.tip==="nalog_poc"){
+      if(cpr){ cpr.kraj=e.t; cpr=null; }
+      uNal=true; cn={poc:e.t, kraj:null, poz:e.poz||0, zona:trenutnaZonaDo(sm,e.t), id:e.id};
+      nal.push(cn);
+    }
+    else if(e.tip==="nalog"){
+      if(uNal){
+        uNal=false;
+        if(cn){ cn.kraj=e.t; if(!cn.poz) cn.poz=e.poz||0; cn.krajId=e.id; cn=null; }
+        cpr={poc:e.t,kraj:null}; praz.push(cpr);
+      }
+    }
+  }
+  function zatvori(a){ for(var j=0;j<a.length;j++) if(a[j].kraj==null) a[j].kraj=kraj; }
+  zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal);
+  return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, kraj:kraj};
+}
+
+/* Uspešnost jednog naloga. Skida se SAMO čekanje na dopunu — pauza ostaje u vremenu,
+   isto kao u zvaničnom obračunu. Brzina bez pauze se računa zasebno, kao napomena. */
+function nalogStat(t, n){
+  var min=(n.kraj-n.poc)/60000, cek=0, pau=0, j;
+  for(j=0;j<t.cek.length;j++) cek += preklop(n.poc,n.kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+  for(j=0;j<t.pau.length;j++) pau += preklop(n.poc,n.kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
+  var cisto = Math.max(0, min-cek);              // pauza OSTAJE unutra
+  var bezPauze = Math.max(0, min-cek-pau);
+  var norma = S.norme[n.zona]||0;
+  var tempo  = (cisto>=0.5    && n.poz>0) ? n.poz/cisto*60    : null;
+  var tempoBP= (bezPauze>=0.5 && n.poz>0) ? n.poz/bezPauze*60 : null;
+  return {min:min, cek:cek, pau:pau, cisto:cisto, bezPauze:bezPauze, norma:norma,
+          tempo:tempo, odst: (norma && tempo!=null) ? (tempo/norma-1)*100 : null,
+          tempoBP:tempoBP, odstBP: (norma && tempoBP!=null) ? (tempoBP/norma-1)*100 : null,
+          normaMin: norma ? n.poz/norma*60 : null};
+}
+/* da li je nalog trenutno otvoren */
+function uNalogu(sm){
+  var st=false;
+  for(var i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip==="nalog_poc") st=true;
+    else if(sm.dogadjaji[i].tip==="nalog") st=false;
+  }
+  return st;
+}
+
+function obracun(sm, sada){
+  /* smena ne može da teče preko svog planiranog kraja, ni ako je zaboravljena otvorena */
+  if(sm.kraj_plan) sada = Math.min(sada, sm.kraj_plan);
+  var t = razlozi(sm, sada);
+  var zone = {}, i, j, s, m, o;
+  function uzmi(z){ if(!zone[z]) zone[z]={min:0,poz:0,naloga:0,praz:0}; return zone[z]; }
+
+  for(i=0;i<t.segs.length;i++){
+    s = t.segs[i];
+    m = (s.kraj - s.poc)/60000;
+    for(j=0;j<t.cek.length;j++) m -= preklop(s.poc,s.kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+    uzmi(s.zona).min += Math.max(0,m);
+  }
+  for(i=0;i<sm.dogadjaji.length;i++){
+    o = sm.dogadjaji[i];
+    if(o.tip==="nalog"){ var z=uzmi(o.zona); z.poz += o.poz; z.naloga++; }
+  }
+
+  var ukMin=0, ukPoz=0, potMin=0, z;
+  for(z in zone){
+    ukMin += zone[z].min; ukPoz += zone[z].poz;
+    var n = S.norme[z] || 0;
+    if(n>0) potMin += zone[z].poz / n * 60;
+    zone[z].norma = n;
+    /* ispod jednog minuta merenje nema smisla — radije ništa nego izmišljen broj */
+    zone[z].tempo = zone[z].min>=1 ? zone[z].poz/zone[z].min*60 : null;
+    zone[z].odst  = (n>0 && zone[z].tempo!=null) ? (zone[z].tempo/n-1)*100 : null;
+  }
+  var cekMin=0, pauMin=0, prazMin=0;
+  for(i=0;i<t.cek.length;i++) cekMin += (t.cek[i].kraj-t.cek[i].poc)/60000;
+  for(i=0;i<t.pau.length;i++) pauMin += (t.pau[i].kraj-t.pau[i].poc)/60000;
+  for(i=0;i<t.praz.length;i++){
+    m = (t.praz[i].kraj-t.praz[i].poc)/60000;
+    /* ako se u praznom hodu čekalo ili pauziralo, ne broji se dvaput */
+    for(j=0;j<t.cek.length;j++) m -= preklop(t.praz[i].poc,t.praz[i].kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+    for(j=0;j<t.pau.length;j++) m -= preklop(t.praz[i].poc,t.praz[i].kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
+    prazMin += Math.max(0,m);
+    /* prazan hod pripada zoni u kojoj se desio — kao i kod njih, svaki minut je nečiji */
+    for(j=0;j<t.segs.length;j++){
+      var up = preklop(t.praz[i].poc,t.praz[i].kraj,t.segs[j].poc,t.segs[j].kraj)/60000;
+      if(up>0 && zone[t.segs[j].zona]) zone[t.segs[j].zona].praz += up;
+    }
+  }
+
+  var meri      = ukMin>=1 && ukPoz>0;          // ima li se šta uopšte računati
+  var ostvareni = meri ? ukPoz/ukMin*60 : null;
+  var trazeni   = (meri && potMin>0) ? ukPoz/potMin*60 : null;
+  var razlika   = (meri && potMin>0) ? (potMin/ukMin-1)*100 : null;
+  var radMin    = Math.max(0, ukMin - pauMin - prazMin*0);
+  var nalogMin  = Math.max(0, ukMin - pauMin - prazMin);   // vreme provedeno u samim nalozima
+
+  /* Živa slika: otvoren nalog se računa kao da će biti završen PO NORMI.
+     Zato ne skače na +900% u petom minutu ni na −100% pre prvog naloga —
+     stoji mirno dok si u tempu, a pada čim pređeš vreme koje ti norma daje. */
+  var otv = null;
+  for(i=0;i<t.nal.length;i++) if(!t.nal[i].krajId) otv = t.nal[i];
+  var pPoz = ukPoz, pPot = potMin, pMin = ukMin, dodatak = 0;
+  if(otv && otv.poz>0){
+    var so = nalogStat(t, otv), no = S.norme[otv.zona]||0;
+    dodatak = (so.normaMin!=null) ? Math.max(0, so.normaMin - so.cisto) : 0;
+    pPoz += otv.poz;
+    pMin += dodatak;
+    if(no>0) pPot += otv.poz/no*60;
+    if(zone[otv.zona]){
+      var zo2 = zone[otv.zona];
+      zo2.pozProj  = zo2.poz + otv.poz;
+      zo2.minProj  = zo2.min + dodatak;
+      zo2.tempoProj= zo2.minProj>=1 ? zo2.pozProj/zo2.minProj*60 : null;
+      zo2.odstProj = (zo2.norma>0 && zo2.tempoProj!=null) ? (zo2.tempoProj/zo2.norma-1)*100 : null;
+    }
+  }
+  for(z in zone){
+    if(zone[z].pozProj===undefined){
+      zone[z].pozProj = zone[z].poz; zone[z].tempoProj = zone[z].tempo; zone[z].odstProj = zone[z].odst;
+    }
+  }
+  var pMeri = pMin>=1 && pPoz>0;
+  var proj = {ukPoz:pPoz, potMin:pPot, ukMin:pMin, dodatak:dodatak, meri:pMeri, otvoren:otv,
+              ostvareni: pMeri ? pPoz/pMin*60 : null,
+              trazeni:   (pMeri && pPot>0) ? pPoz/pPot*60 : null,
+              razlika:   (pMeri && pPot>0) ? (pPot/pMin-1)*100 : null};
+
+  return {zone:zone, ukMin:ukMin, ukPoz:ukPoz, potMin:potMin, cekMin:cekMin, pauMin:pauMin,
+          prazMin:prazMin, nalogMin:nalogMin, proj:proj,
+          radMin:radMin, meri:meri, ostvareni:ostvareni, trazeni:trazeni, razlika:razlika,
+          radniTempo: (meri && radMin>=1) ? ukPoz/radMin*60 : null,
+          nalogTempo: (meri && nalogMin>=1) ? ukPoz/nalogMin*60 : null, tl:t};
+}
+
+/* zona koja je važila u datom trenutku */
+function trenutnaZonaDo(sm, t){
+  var z=null;
+  for(var i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip==="zona" && sm.dogadjaji[i].t<=t) z=sm.dogadjaji[i].zona;
+  }
+  return z;
+}
+/* oznaka pozicije: 8 cifara → 240-190-02, ispisuje se i dok je nedovršena */
+function kodTekst(cifre){
+  cifre = String(cifre||"").replace(/\D/g,"").slice(0,8);
+  var s = cifre.slice(0,3);
+  if(cifre.length>3) s += "-"+cifre.slice(3,6);
+  if(cifre.length>6) s += "-"+cifre.slice(6,8);
+  return s;
+}
+
+/* stanje smene */
+function trenutnaZona(sm){
+  for(var i=sm.dogadjaji.length-1;i>=0;i--) if(sm.dogadjaji[i].tip==="zona") return sm.dogadjaji[i].zona;
+  return null;
+}
+function uStanju(sm, poc, kraj){
+  var st=false;
+  for(var i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip===poc) st=true;
+    else if(sm.dogadjaji[i].tip===kraj) st=false;
+  }
+  return st;
+}
+function ceka(sm){ return uStanju(sm,"cekanje","nastavak"); }
+function pauzira(sm){ return uStanju(sm,"pauza","kraj_pauze"); }
+function odKada(sm, tip, kraj){
+  var t=null;
+  for(var i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip===tip) t=sm.dogadjaji[i].t;
+    else if(sm.dogadjaji[i].tip===kraj) t=null;
+  }
+  return t;
+}
+
+/* Cilj — nezavisan od zone.
+   Svaki minut rada „zaradi" onoliko minuta norme koliki ti je odnos prema normi te zone
+   (radiš li 120% norme, minut vredi 1,2 minuta). Zato se sve svodi na jedan broj:
+   koliko procenata norme moraš držati do kraja smene, u bilo kojoj kombinaciji zona. */
+function cilj(sm, o, sada){
+  var uzivo = o.proj && o.proj.otvoren && o.proj.meri;
+  /* nalog u toku se računa kao završen po normi — pa i vreme koje mu norma još daje */
+  var pot = uzivo ? o.proj.potMin : o.potMin;
+  var min = uzivo ? o.proj.ukMin  : o.ukMin;
+  var preostalo = Math.max(0, (sm.kraj_plan - sada)/60000 - (uzivo ? o.proj.dodatak : 0));
+  var manjak = min - pot;                       // >0 = kasniš toliko minuta za normom
+  if(!o.meri && !uzivo && manjak<=0) return null;
+  if(preostalo < 1) return {gotovo:true, manjak:manjak, preostalo:0};
+  return {preostalo:preostalo, manjak:manjak, odnos: 1 + manjak/preostalo};
+}
+
+/* =========================================================================
+   AKCIJE
+   ========================================================================= */
+function dogadjaj(tip, extra){
+  if(!S.smena) return;
+  var e = {tip:tip, t:Date.now()};
+  if(extra) for(var k in extra) e[k]=extra[k];
+  S.smena.dogadjaji.push(e); save(); render();
+}
+function pocniSmenu(zona){
+  var sada = Date.now(), i = izabranaSmena(sada), def = S.smeneDef[i];
+  var zvPoc = tsNaDan(sada, def.poc);
+  var razlika = Math.round((sada - zvPoc)/60000);
+  /* ako je smena odavno počela, aplikacija ne sme sama da odluči šta je bilo pre —
+     inače bi ti nabrojala sate bez ijedne stavke i pokazala besmislen tempo */
+  if(razlika > 20){ zonaIzbor = zona; sheet = "odakle"; render(); return; }
+  pokreni(zona, zvPoc, def, (razlika>0 ? razlika : 0), false);
+}
+function pokreni(zona, odKada, def, kasnjenje, delimicna){
+  var sada = Date.now();
+  var zvPoc = tsNaDan(sada, def.poc);
+  var zvKraj = zvPoc + trajanjeSmene(def)*60000;
+  danIzbor = null;
+  S.smena = {datum:danKljuc(zvPoc), smena:def.ime,
+             pocetak:odKada, kraj_plan:zvKraj,
+             zvanicniPocetak:zvPoc, delimicna:!!delimicna,
+             stvarniPocetak:sada, kasnjenje:kasnjenje||0,
+             kraj:null, dogadjaji:[{tip:"zona",zona:zona,t:odKada}]};
+  sheet=null; save(); render();
+  poruka(delimicna ? "Merim od "+sat(odKada)
+        : (kasnjenje>0 ? "Smena počela · kašnjenje "+kasnjenje+" min" : "Smena počela · "+zona));
+}
+function promeniZonu(z){
+  var sm=S.smena; if(!sm) return;
+  if(trenutnaZona(sm)===z) return;
+  var zad = sm.dogadjaji[sm.dogadjaji.length-1];
+  if(zad && zad.tip==="zona" && Date.now()-zad.t < 45000){ zad.zona=z; }   // ispravka pogrešnog dodira
+  else sm.dogadjaji.push({tip:"zona",zona:z,t:Date.now()});
+  save(); render(); poruka("Zona "+z);
+}
+/* nalog se OTVARA brojem stavki — tada se zna koliko ima, i tada kreće njegovo vreme */
+function otvoriUnosStavki(kada){
+  if(!S.smena) return;
+  keypad = {rezim:"stavke", v:"", kada:(kada||null)};
+  render();
+}
+function pocniNalog(poz, kada){
+  var sm=S.smena; if(!sm || uNalogu(sm) || !poz) return;
+  sm.dogadjaji.push({tip:"nalog_poc", t:(kada||Date.now()), poz:poz, id:"p"+Date.now()});
+  save(); render(); poruka("Nalog "+poz+" stavki — vreme teče");
+}
+/* ispravka broja stavki na otvorenom nalogu */
+function ispraviStavke(poz){
+  var sm=S.smena; if(!sm||!poz) return;
+  for(var i=sm.dogadjaji.length-1;i>=0;i--)
+    if(sm.dogadjaji[i].tip==="nalog_poc"){ sm.dogadjaji[i].poz=poz; break; }
+  save(); render(); poruka("Nalog ima "+poz+" stavki");
+}
+function zavrsiNalog(){
+  var sm=S.smena, i; if(!sm || !uNalogu(sm)) return;
+  var otvoren=null;
+  for(i=sm.dogadjaji.length-1;i>=0;i--)
+    if(sm.dogadjaji[i].tip==="nalog_poc"){ otvoren=sm.dogadjaji[i]; break; }
+  if(!otvoren || !otvoren.poz){ otvoriUnosStavki(); poruka("Prvo upiši koliko stavki ima"); return; }
+  var t=Date.now();
+  sm.dogadjaji.push({tip:"nalog", t:t, zona:trenutnaZona(sm), poz:otvoren.poz, id:t+"_"+otvoren.poz});
+  save(); sheet="rezultat"; render();
+}
+/* čekanje kreće odmah — vreme je važnije od kucanja; oznaka se upisuje dok stojiš */
+function pocniCekanje(){
+  var sm=S.smena; if(!sm || ceka(sm)) return;
+  var id = "c"+Date.now();
+  sm.dogadjaji.push({tip:"cekanje", t:Date.now(), kod:"", id:id});
+  save();
+  keypad = {rezim:"kod", v:"", id:id};
+  render();
+}
+function upisiKod(id, cifre){
+  var sm=smenaPoUnosu(id); if(!sm) return;
+  for(var i=0;i<sm.dogadjaji.length;i++)
+    if(sm.dogadjaji[i].tip==="cekanje" && sm.dogadjaji[i].id===id){ sm.dogadjaji[i].kod = cifre; break; }
+  save();
+}
+function obrisiCekanje(id){
+  var sm=smenaPoUnosu(id); if(!sm) return;
+  for(var i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip==="cekanje" && sm.dogadjaji[i].id===id){
+      sm.dogadjaji.splice(i,1);
+      /* skloni i pripadajući nastavak, da se ne poremeti računica */
+      for(var j=i;j<sm.dogadjaji.length;j++){
+        if(sm.dogadjaji[j].tip==="nastavak"){ sm.dogadjaji.splice(j,1); break; }
+        if(sm.dogadjaji[j].tip==="cekanje") break;
+      }
+      break;
+    }
+  }
+  save(); render(); poruka("Čekanje obrisano");
+}
+function ponistiNalog(){
+  var sm=S.smena; if(!sm) return;
+  for(var i=sm.dogadjaji.length-1;i>=0;i--){
+    if(sm.dogadjaji[i].tip==="nalog"){
+      var p=sm.dogadjaji[i].poz;
+      /* skloni i početak sledećeg naloga, da se vratiš tačno tamo gde si bio */
+      for(var j=sm.dogadjaji.length-1;j>i;j--)
+        if(sm.dogadjaji[j].tip==="nalog_poc") sm.dogadjaji.splice(j,1);
+      sm.dogadjaji.splice(i,1); save(); render();
+      poruka("Poništeno −"+p); return;
+    }
+  }
+  poruka("Nema unetih naloga");
+}
+function zavrsiSmenu(){
+  var sm=S.smena; if(!sm) return;
+  if(ceka(sm)) sm.dogadjaji.push({tip:"nastavak",t:Date.now()});
+  if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze",t:Date.now()});
+  sm.kraj = Date.now();
+  S.dani.push(sm); S.smena=null; save(); tab="dan"; render();
+  poruka("Smena zatvorena");
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  var v=document.getElementById("view"), b=document.getElementById("bar");
+  document.getElementById("app").className = "app" + (tab==="smena"&&S.smena ? "" : " nobar");
+  var tb=document.getElementById("tabs").children;
+  for(var i=0;i<tb.length;i++) tb[i].className = (tb[i].dataset.tab===tab?"on":"");
+  document.getElementById("sub").textContent = S.smena
+    ? (S.smena.smena ? S.smena.smena.toLowerCase()+" smena · " : "")
+      + (S.smena.delimicna ? "mereno od " : "")
+      + sat(S.smena.pocetak)+"–"+sat(S.smena.kraj_plan)
+      + (S.smena.kasnjenje>0 ? " · kasnio "+S.smena.kasnjenje+" min" : "")
+    : "komisioniranje";
+
+  var upoz = saveErr
+    ? '<div class="warn" style="margin-bottom:11px"><b>Pažnja — telefon ne čuva podatke.</b> '
+      + 'Ovaj pregledač ne dozvoljava čuvanje (najčešće privatni režim). Smena radi, ali se gubi kad zatvoriš karticu. '
+      + 'Otvori stranicu u običnom prozoru pregledača.</div>'
+    : "";
+
+  if(tab==="smena"){ v.innerHTML = upoz + (S.smena ? viewAktivna() : viewStart()); b.innerHTML = S.smena ? barAktivna() : ""; }
+  else if(tab==="dan"){ v.innerHTML = upoz + viewDan(); b.innerHTML=""; }
+  else if(tab==="mesec"){ v.innerHTML = upoz + viewMesec(); b.innerHTML=""; }
+  else { v.innerHTML = upoz + viewNorme(); b.innerHTML=""; }
+
+  document.getElementById("ov").innerHTML = keypad ? ovKeypad() : (sheet ? ovSheet() : "");
+}
+
+/* ---- start smene ---- */
+function viewStart(){
+  var h="", i;
+
+  h += '<div class="stack">';
+
+  /* jednokratni uvoz avgusta iz sveske */
+  if(!S.avgustUvezen){
+    h += '<div class="card stack" style="border-color:var(--accent)">'
+      +  '<div class="lbl" style="color:var(--accent)">Avgust iz sveske</div>'
+      +  '<div class="small">Deset radnih dana, <b>3–14. avgust</b>, po tvom zapisu: ukupne stavke i čekanje. '
+      +  'Zone su procena — ona u kojoj si tog dana najviše radio, plus oko desetine smene u FT.</div>'
+      +  '<div class="row" style="gap:8px">'
+      +   '<button class="btn main" style="flex:2;min-height:50px" data-act="uvezi-avgust">Upiši tih 10 dana</button>'
+      +   '<button class="btn ghost" style="flex:1;min-height:50px" data-act="preskoci-avgust">Ne treba</button>'
+      +  '</div></div>';
+  }
+
+  /* smena koja je ostala otvorena pa je sama zatvorena — traži potvrdu da nije greška */
+  var zao = null;
+  for(i=0;i<S.dani.length;i++) if(S.dani[i].autoZatvorena) zao = S.dani[i];
+  if(zao){
+    var zo = obracun(zao, zao.kraj);
+    h += '<div class="card stack" style="border-color:var(--accent)">'
+      +  '<div class="lbl" style="color:var(--accent)">Smena je ostala otvorena</div>'
+      +  '<div class="small">Smena od <b>'+datumTekst(zao.datum)+'</b> nije zatvorena, pa je sama zatvorena u '
+      +  sat(zao.kraj)+'. Upisano je '+cel(zo.ukPoz)+' pozicija i '+cel(zo.ukMin)+' minuta.</div>'
+      +  '<div class="small muted">Ako tog dana nisi radio — obriši je, da ti ne kvari mesec.</div>'
+      +  '<div class="row" style="gap:8px">'
+      +   '<button class="btn ghost" style="flex:1;min-height:46px;color:var(--bad)" data-act="brisi-dan" data-p="'+zao.pocetak+'">Obriši</button>'
+      +   '<button class="btn ghost" style="flex:1;min-height:46px" data-act="potvrdi-smenu" data-p="'+zao.pocetak+'">Bila je prava</button>'
+      +  '</div></div>';
+  }
+
+  var sada = Date.now(), idx = izabranaSmena(sada), def = S.smeneDef[idx];
+  var zvPoc = tsNaDan(sada, def.poc);
+  var razlika = Math.round((sada - zvPoc)/60000);
+
+  h += '<div class="card stack">'
+    +  '<div class="lbl">Nova smena</div>'
+    +  '<div class="row" style="flex-wrap:wrap;gap:6px">';
+  for(i=0;i<S.smeneDef.length;i++)
+    h += '<button class="chip'+(i===idx?" on":"")+'" data-act="izbor-smene" data-i="'+i+'">'
+      +  S.smeneDef[i].ime+' '+S.smeneDef[i].poc+'–'+S.smeneDef[i].kraj+'</button>';
+  h += '</div>';
+
+  if(razlika > 0 && razlika <= 90)
+    h += '<div class="goal need" style="padding:11px 13px"><div class="lbl">Kasniš u smenu</div>'
+      +  '<div class="n" style="font-size:26px">'+razlika+' <span style="font-size:15px;font-weight:600">minuta</span></div>'
+      +  '<div class="cap">upisuje se u evidenciju; obračun ipak teče od '+def.poc+', kao kod njih</div></div>';
+  else if(razlika > 90)
+    h += '<div class="card" style="background:var(--surface2)"><div class="tiny muted">'
+      +  'Prošlo je '+trajanje(razlika)+' od početka smene ('+def.poc+'). Kašnjenje se ne upisuje samo — '
+      +  'ako si stvarno kasnio, upiši ga posle preko <b>⋯ → Ispravi vremena</b>.</div></div>';
+
+  /* zona se samo bira; smena kreće tek dugmetom START */
+  if(!zonaIzbor || S.norme[zonaIzbor]===undefined) zonaIzbor = S.aktivne[0] || "F6";
+  h += '<div class="small muted">Izaberi zonu u kojoj počinješ, pa dodirni START. Do tada ništa ne teče.</div>'
+    +  '<div class="zones">';
+  var zl = S.aktivne.slice(); if(zl.indexOf(zonaIzbor)<0) zl.push(zonaIzbor);
+  for(i=0;i<zl.length;i++)
+    h += '<button class="z'+(zl[i]===zonaIzbor?" on":"")+'" data-act="izbor-zone" data-z="'+zl[i]+'">'
+      +  '<span class="k">'+zl[i]+'</span><span class="v">norma '+(S.norme[zl[i]]||"—")+'</span></button>';
+  h += '<button class="zmore" data-act="sve-zone-start">+ zona</button></div>'
+    +  '</div>';
+
+  h += '<button class="btn main wide" style="min-height:64px;font-size:19px" data-act="start-smene">'
+    +  'START — '+zonaIzbor+'</button>';
+
+  var zadnji = S.dani.length ? S.dani[S.dani.length-1] : null;
+  if(zadnji && zadnji.kraj){
+    var o = obracun(zadnji, zadnji.kraj);
+    h += '<div class="card stack">'
+      + '<div class="lbl">Poslednja smena · '+datumTekst(zadnji.datum)+'</div>'
+      + '<div class="row"><div><div class="num" style="font-size:27px;font-weight:600">'+br(o.ostvareni)+'</div>'
+      + '<div class="tiny muted">ostvareno poz/h</div></div>'
+      + '<div class="sp"></div>'
+      + '<div style="text-align:right"><div class="num '+kl(o.razlika)+'" style="font-size:27px;font-weight:600">'
+      + pct(o.razlika)+'</div>'
+      + '<div class="tiny muted">prema traženom '+br(o.trazeni)+'</div></div></div></div>';
+  }
+
+  h += '<div class="card stack"><div class="lbl">Da ti bude pri ruci</div>'
+    +  '<div class="small muted">Otvori meni pregledača i izaberi <b>Dodaj na početni ekran</b>. Posle radi kao aplikacija i bez interneta, a podaci ostaju u telefonu.</div></div>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- aktivna smena ---- */
+function viewAktivna(){
+  var sm=S.smena, sada=Date.now(), o=obracun(sm,sada), c=cilj(sm,o,sada);
+  var z=trenutnaZona(sm), h="", i;
+  var jeCekanje=ceka(sm), jePauza=pauzira(sm);
+
+  h += '<div class="stack">';
+
+  if(jeCekanje){
+    var od=odKada(sm,"cekanje","nastavak");
+    var tek=null;
+    for(i=0;i<o.tl.cek.length;i++) if(o.tl.cek[i].poc===od) tek=o.tl.cek[i];
+    h += '<div class="waitbox"><span class="dot"></span><div><div class="lbl" style="color:var(--bad)">Čekaš dopunu</div>'
+      +  '<div class="n">'+kratko((sada-od)/60000)+'</div></div>'
+      +  '<div class="sp"></div><div class="tiny muted" style="text-align:right">od '+sat(od)+'<br>ne ulazi u obračun</div></div>';
+    h += '<div class="tiny muted" style="margin:-4px 2px 0">Nalog ostaje otvoren. Kad se pozicija dopuni — '
+      +  '<b>NASTAVI</b>, dovršiš isti nalog, pa ga tek onda zatvoriš.</div>';
+    if(tek) h += '<button class="btn wide ghost" style="min-height:52px;justify-content:flex-start" '
+      +  'data-act="kod" data-id="'+tek.id+'" data-kod="'+esc(tek.kod)+'">'
+      +  (tek.kod ? '<span class="num" style="font-size:19px;font-weight:700">'+kodTekst(tek.kod)+'</span>'
+                  +'<span class="tiny muted" style="margin-left:10px">dodirni da ispraviš</span>'
+                 : '<span style="color:var(--accent)">+ upiši oznaku pozicije</span>')+'</button>';
+  }
+  if(!jeCekanje && !uNalogu(sm)){
+    var pz = o.tl.praz.length ? o.tl.praz[o.tl.praz.length-1] : null;
+    var traje = pz ? (sada-pz.poc)/60000 : 0;
+    var prek = traje >= (S.pragPrazan||5);
+    h += '<div class="'+(prek?"waitbox":"goal need")+'" style="padding:12px 14px;display:block">'
+      +  '<div class="lbl"'+(prek?' style="color:var(--bad)"':'')+'>'
+      +    (prek?"Prazan hod predugo traje":"Prazan hod — nisi u nalogu")+'</div>'
+      +  '<div class="n" style="font-size:30px'+(prek?";color:var(--bad)":"")+'">'+kratko(traje)+'</div>'
+      +  '<div class="cap"'+(prek?' style="color:var(--bad)"':'')+'>'
+      +    (prek ? "prešao si "+(S.pragPrazan||5)+" min — uzmi sledeći nalog"
+                : "ulazi u normu · dodirni POČNI NALOG kad uzmeš sledeći")+'</div></div>';
+  }
+  if(jePauza){
+    var op=odKada(sm,"pauza","kraj_pauze"), fond=S.pauzaFond||60, ostalo=fond-o.pauMin;
+    h += '<div class="card row"><div><div class="lbl">Pauza traje</div>'
+      +  '<div class="num" style="font-size:26px;font-weight:600">'+kratko((sada-op)/60000)+'</div></div>'
+      +  '<div class="sp"></div><div style="text-align:right">'
+      +  '<div class="num'+(ostalo<0?" b":"")+'" style="font-size:20px;font-weight:600">'
+      +    (ostalo>=0?cel(ostalo)+" min":"−"+cel(-ostalo)+" min")+'</div>'
+      +  '<div class="tiny muted">'+(ostalo>=0?"ostalo od "+fond:"preko fonda")+'</div></div></div>';
+  }
+
+  /* NALOG U TOKU — vreme teče uživo, uz to koliko ti norma daje za njega */
+  if(uNalogu(sm) && o.tl.nal.length){
+    var nt = o.tl.nal[o.tl.nal.length-1], stt = nalogStat(o.tl, nt);
+    var proteklo = (sada - nt.poc)/60000;
+    var kasniN = stt.normaMin!=null && stt.cisto > stt.normaMin;
+    h += '<div class="card"><div class="row" style="align-items:flex-start">'
+      +  '<div><div class="lbl">Nalog u toku · '
+      +    '<button data-act="ispravi-stavke" style="color:var(--accent);font:inherit;text-transform:none;letter-spacing:0">'
+      +      nt.poz+' stavki ✎</button></div>'
+      +  '<div class="num" style="font-size:34px;font-weight:600;line-height:1.05'
+      +    (kasniN?";color:var(--bad)":"")+'">'+kratko(proteklo)+'</div>'
+      +  '<div class="tiny muted">'+(jeCekanje?"stoji dok čekaš dopunu":"teče od "+sat(nt.poc))+'</div></div>'
+      +  '<div class="sp"></div><div style="text-align:right">'
+      +   (stt.normaMin!=null
+          ? '<div class="num" style="font-size:22px;font-weight:600">'+cel(stt.normaMin)+' min</div>'
+            +'<div class="tiny muted">daje ti norma '+(stt.norma||"")+'</div>'
+            +'<div class="tiny '+(kasniN?"b":"g")+'" style="margin-top:4px">'
+            + (kasniN ? "prekoračeno "+cel(stt.cisto-stt.normaMin)+" min"
+                      : "ostalo "+cel(stt.normaMin-stt.cisto)+" min")+'</div>'
+          : '<div class="tiny muted">nema norme za zonu</div>')
+      +  '</div></div></div>';
+  }
+
+  /* HERO */
+  /* dok je nalog otvoren vodi projekcija „ako sada završiš" — inače bi ekran stajao na −100 % */
+  var P = (o.proj.otvoren && o.proj.meri) ? o.proj : o;
+  var uzivo = P === o.proj;
+  var raz = P.razlika, ima = raz!=null;
+  var kls = !ima ? "" : (raz>=0?"up":"down");
+  var sirina = ima ? Math.max(4,Math.min(100, (P.ostvareni/P.trazeni)*100 )) : 0;
+  h += '<div class="hero '+kls+'"><div class="body">'
+    +  '<div class="lbl">Razlika prema traženom učinku'+(uzivo?' · sa nalogom u toku':'')+'</div>'
+    +  '<div class="big">'+(ima?pct(raz).replace("%",""):"—")+'<span class="u">'+(ima?"%":"")+'</span></div>'
+    +  '<div class="cmp">'
+    +    '<div><span class="lbl">Ostvareno</span><b>'+br(P.ostvareni)+'</b></div>'
+    +    '<div><span class="lbl">Traženo</span><b>'+br(P.trazeni)+'</b></div>'
+    +    '<div><span class="lbl">Pozicija</span><b>'+cel(P.ukPoz)+'</b></div>'
+    +    '<div><span class="lbl">Minuta</span><b>'+cel(uzivo?P.ukMin:o.ukMin)+'</b></div>'
+    +  '</div>'
+    +  (uzivo
+        ? '<div class="tiny muted" style="margin-top:8px">računa se kao da nalog u toku završiš po normi'
+          + (o.razlika!=null ? ' · zaključeno do sada '+pct(o.razlika) : '')+'</div>'
+        : '')
+    +  '</div><div class="gauge"><i style="width:'+sirina+'%"></i></div></div>';
+
+  /* CILJ — koliko procenata norme moraš držati do kraja, u bilo kojoj kombinaciji zona */
+  if(c && !c.gotovo){
+    var pr = Math.round(c.odnos*100), kasni = c.manjak>0;
+    var lista = S.aktivne.slice(); if(z && lista.indexOf(z)<0) lista.push(z);
+    var tempi = "";
+    for(i=0;i<lista.length;i++){
+      var nn = S.norme[lista[i]]||0; if(!nn) continue;
+      tempi += (tempi?" · ":"") + lista[i] + " " + cel(nn*c.odnos) + "/h";
+    }
+    h += '<div class="goal '+(kasni?"need":"ok")+'">'
+      +  '<div class="lbl">Do kraja smene drži</div>'
+      +  '<div class="n">'+pr+' % <span style="font-size:16px;font-weight:600">norme</span></div>'
+      +  '<div class="cap">'
+      +    (pr>100 ? "to je "+(pr-100)+" % brže nego što norma traži"
+                   : (pr===100 ? "tačno onoliko koliko norma traži"
+                                : "smeš i "+(100-pr)+" % sporije od norme"))
+      +    '</div>'
+      +  '<div class="cap">'
+      +    (kasni ? "kasniš "+cel(c.manjak)+" min za normom" : "ispred si "+cel(-c.manjak)+" min")
+      +    ' · ostalo '+trajanje(c.preostalo)+' · svejedno u kojim zonama</div>'
+      +  (tempi ? '<div class="cap" style="margin-top:6px"><b>'+tempi+'</b></div>' : '')
+      +  (c.odnos>2 ? '<div class="cap" style="margin-top:6px">To je van dohvata — ovaj dan se više ne može izvući.</div>' : '')
+      +  '</div>';
+  }
+
+  /* ZONE */
+  h += '<div class="stack"><div class="lbl">Zona — dodirni da promeniš</div>'
+    +  '<div class="zones">'+zoneDugmad(o)+'</div></div>';
+
+  /* SITNA STATISTIKA */
+  var dz = o.zone[z];
+  var dzT = dz ? (dz.tempoProj!=null?dz.tempoProj:dz.tempo) : null;
+  var dzO = dz ? (dz.odstProj!=null?dz.odstProj:dz.odst) : null;
+  h += '<div class="card"><div class="mini">'
+    +  minicol("U zoni "+(z||""), dzT!=null ? br(dzT,0)+" poz/h" : "—",
+              dzO!=null ? pct(dzO,0)+" od norme" : "norma "+(S.norme[z]||"—"))
+    +  minicol("Brzina u nalozima", o.nalogTempo!=null ? br(o.nalogTempo,0)+" poz/h" : "—",
+              "bez praznog hoda i pauze")
+    +  minicol("Čekanje", cel(o.cekMin)+" min", "jedino se ovo odbija")
+    +  minicol("Prazan hod", cel(o.prazMin)+" min", o.pauMin>0 ? "+ pauza "+cel(o.pauMin)+" min · ulazi u normu" : "ulazi u normu")
+    +  '</div></div>';
+
+  h += prazanKartica(sm, o);
+  h += pauzaKartica(sm, o);
+  h += cekanjaKartica(sm, o, true);
+
+  h += nalozeKartica(sm, o, 8);
+
+  h += '</div>';
+  return h;
+}
+/* spisak čekanja — ono što se prijavljuje na kraju smene */
+function cekanjaKartica(sm, o, moze){
+  var c=o.tl.cek, i, h;
+  h = '<div class="card"><div class="row" style="margin-bottom:2px"><div class="lbl">Čekanja za prijavu</div>'
+    + '<div class="sp"></div><div class="tiny muted">'+c.length+' · ukupno '+cel(o.cekMin)+' min</div></div>';
+  if(!c.length){
+    h += '<div class="empty">Danas nije bilo čekanja.</div></div>';
+    return h;
+  }
+  for(i=0;i<c.length;i++){
+    var d=(c[i].kraj-c[i].poc)/60000, uToku=(sm.kraj?false:(c[i].kraj>=Date.now()-1500 && ceka(sm)));
+    h += '<div class="ord">'
+      +  '<button class="p" style="text-align:left;min-width:118px" data-act="kod" data-id="'+c[i].id+'" data-kod="'+esc(c[i].kod)+'">'
+      +    (c[i].kod ? kodTekst(c[i].kod) : '<span style="color:var(--accent);font-size:13px;font-weight:600">+ oznaka</span>')
+      +  '</button>'
+      +  '<span class="t" style="width:auto">'+sat(c[i].poc)+'–'+(uToku?"…":sat(c[i].kraj))+'</span>'
+      +  '<span class="sp"></span>'
+      +  '<span class="num" style="font-weight:600">'+cel(d)+' min</span>'
+      +  (moze?'<button class="x" style="margin-left:8px" data-act="brisi-cekanje" data-id="'+c[i].id+'" aria-label="Obriši">✕</button>':'')
+      +  '</div>';
+  }
+  h += '<button class="btn wide ghost" style="margin-top:10px;min-height:46px" data-act="kopiraj-cekanja">Kopiraj spisak čekanja</button>';
+  h += '</div>';
+  return h;
+}
+
+/* nalozi sa svojim vremenom i uspešnošću */
+function nalozeKartica(sm, o, granica){
+  var lista=[], i, h;
+  for(i=0;i<o.tl.nal.length;i++)
+    if(o.tl.nal[i].krajId) lista.push(o.tl.nal[i]);      // samo završeni
+  h = '<div class="card"><div class="row" style="margin-bottom:4px"><div class="lbl">Nalozi</div>'
+    + '<div class="sp"></div><div class="tiny muted">'+lista.length+'</div></div>';
+  if(!lista.length){
+    h += '<div class="empty">Još nijedan završen nalog.</div></div>';
+    return h;
+  }
+  var n = granica ? Math.min(lista.length, granica) : lista.length;
+  for(i=lista.length-1; i>=lista.length-n; i--){
+    var r=lista[i], st=nalogStat(o.tl, r);
+    h += '<div class="ord"><span class="t">'+sat(r.poc)+'</span><span class="zn">'+(r.zona||"")+'</span>'
+      +  '<span class="p" style="width:52px">'+r.poz+'</span>'
+      +  '<span class="tiny muted" style="width:56px">'+cel(st.min)+' min</span>'
+      +  '<span class="sp"></span>'
+      +  '<span class="num '+kl(st.odst)+'" style="font-weight:600">'+pct(st.odst,0)+'</span>'
+      +  '<button class="x" style="margin-left:8px" data-act="obrisi" data-id="'+r.krajId+'" aria-label="Obriši nalog">✕</button></div>';
+  }
+  if(lista.length>n) h += '<div class="tiny muted" style="padding-top:8px">…i još '+(lista.length-n)+' — sve u kartici <b>Dan</b>.</div>';
+  h += '</div>';
+  return h;
+}
+
+/* pauza — ceo fond se troši iz više delova, zato se vidi i utrošak i ostatak */
+function pauzaKartica(sm, o){
+  var p=o.tl.pau, fond=S.pauzaFond||60, ostalo=fond-o.pauMin, i, h, lista=[];
+  for(i=0;i<p.length;i++){
+    var d=(p[i].kraj-p[i].poc)/60000;
+    if(d<0.5) continue;
+    lista.push({poc:p[i].poc, kraj:p[i].kraj, min:d, uToku:(!sm.kraj && pauzira(sm) && i===p.length-1)});
+  }
+  h = '<div class="card"><div class="row" style="margin-bottom:2px"><div class="lbl">Pauza</div>'
+    + '<div class="sp"></div><div class="tiny muted">'+lista.length+(lista.length===1?" put":" puta")+'</div></div>'
+    + '<div class="mini" style="margin:6px 0 '+(lista.length?"10px":"0")+'">'
+    +   minicol("Iskorišćeno", cel(o.pauMin)+" min", "od "+fond+" min fonda")
+    +   minicol(ostalo>=0?"Ostalo":"Prekoračeno",
+               cel(Math.abs(ostalo))+" min",
+               ostalo>=0 ? "još toliko smeš" : "toliko preko fonda")
+    +  '</div>';
+  for(i=0;i<lista.length;i++){
+    var r=lista[i];
+    h += '<div class="ord"><span class="num" style="font-weight:600;width:64px">'+cel(r.min)+' min</span>'
+      +  '<span class="t" style="width:auto">'+sat(r.poc)+'–'+(r.uToku?"…":sat(r.kraj))+'</span></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* zastoji između naloga — po tome ih zovu na razgovor, zato se vide pojedinačno */
+function prazanKartica(sm, o){
+  var p=o.tl.praz, prag=S.pragPrazan||5, i, h, naj=0, preko=0, lista=[];
+  for(i=0;i<p.length;i++){
+    var d=(p[i].kraj-p[i].poc)/60000;
+    if(d<0.5) continue;
+    if(d>naj) naj=d;
+    if(d>=prag) preko++;
+    lista.push({poc:p[i].poc, kraj:p[i].kraj, min:d, zona:trenutnaZonaDo(sm,p[i].poc),
+                uToku:(!sm.kraj && !uNalogu(sm) && i===p.length-1)});
+  }
+  h = '<div class="card"><div class="row" style="margin-bottom:2px"><div class="lbl">Prazan hod</div>'
+    + '<div class="sp"></div><div class="tiny muted">'+lista.length+' zastoja · '+cel(o.prazMin)+' min</div></div>';
+  if(!lista.length){ h += '<div class="empty">Nijednom nisi stao između naloga.</div></div>'; return h; }
+  h += '<div class="mini" style="margin:6px 0 10px">'
+    +   minicol("Najduži zastoj", cel(naj)+" min", "ovaj najviše bode oči")
+    +   minicol("Preko "+prag+" min", preko+(preko===1?" zastoj":" zastoja"), preko?"ove umanji":"nema takvih")
+    +  '</div>';
+  lista.sort(function(a,b){ return b.min-a.min; });
+  for(i=0;i<Math.min(lista.length,12);i++){
+    var r=lista[i];
+    h += '<div class="ord"><span class="num" style="font-weight:600;width:64px'
+      +  (r.min>=prag?';color:var(--bad)':'')+'">'+cel(r.min)+' min</span>'
+      +  '<span class="t" style="width:auto">'+sat(r.poc)+'–'+(r.uToku?"…":sat(r.kraj))+'</span>'
+      +  '<span class="sp"></span><span class="zn">'+(r.zona||"")+'</span></div>';
+  }
+  if(lista.length>12) h += '<div class="tiny muted" style="padding-top:8px">Prikazano dvanaest najdužih od '+lista.length+'.</div>';
+  h += '</div>';
+  return h;
+}
+
+function minicol(l,v,s){
+  return '<div style="flex:1;min-width:0"><div class="lbl">'+l+'</div>'
+    + '<div class="num" style="font-size:17px;font-weight:600;margin-top:2px">'+v+'</div>'
+    + '<div class="tiny muted" style="white-space:normal">'+s+'</div></div>';
+}
+function zoneDugmad(o){
+  var h="", lista=S.aktivne.slice(), z=S.smena?trenutnaZona(S.smena):null, i;
+  if(z && lista.indexOf(z)<0) lista.push(z);
+  for(i=0;i<lista.length;i++){
+    var k=lista[i], d=o&&o.zone[k], sub;
+    /* dok zona nema nijednu upisanu stavku, prikaz ostaje norma — ne lažni −100 % */
+    var dt = d ? (d.tempoProj!=null ? d.tempoProj : d.tempo) : null;
+    var dd = d ? (d.odstProj!=null ? d.odstProj : d.odst) : null;
+    if(d && dt!=null && dd!=null && (d.pozProj||d.poz)>0){
+      sub = '<span class="v '+kl(dd)+'">'+br(dt,0)+' · '+pct(dd,0)+'</span>';
+    } else sub = '<span class="v">norma '+(S.norme[k]||"—")+'</span>';
+    h += '<button class="z'+(k===z?" on":"")+'" data-act="zona" data-z="'+k+'">'
+      +  '<span class="k">'+k+'</span>'+sub+'</button>';
+  }
+  h += '<button class="zmore" data-act="sve-zone">+ zona</button>';
+  return h;
+}
+function barAktivna(){
+  var sm=S.smena, jeC=ceka(sm), uNal=uNalogu(sm);
+  var glavno = !uNal
+    ? '<button class="btn main" data-act="pocni-nalog">POČNI NALOG</button>'
+    /* dok se čeka dopuna nalog je OTVOREN — ne može da se zatvori dok se ne nastavi */
+    : '<button class="btn main'+(jeC?" tiho":"")+'" data-act="nalog">NALOG ZAVRŠEN</button>';
+  return '<div class="bar"><div class="in">'
+    + '<button class="btn '+(jeC?"stop":"ghost")+'" style="min-width:98px" data-act="'+(jeC?"nastavi":"cekaj")+'">'
+    +   (jeC?"NASTAVI":"ČEKANJE")+'</button>'
+    + glavno
+    + '<button class="btn sq" data-act="meni" aria-label="Meni">⋯</button>'
+    + '</div></div>';
+}
+
+/* ---- DAN ---- */
+function viewDan(){
+  var sm = smenaZaPrikaz();
+  if(!sm) return '<div class="card"><div class="empty">Nema još nijedne smene.<br>Počni je u kartici <b>Smena</b>.</div></div>';
+  var sada=Date.now(), o=obracun(sm, sm.kraj||sada), h="", z, i;
+
+  h += '<div class="stack">';
+
+  /* biranje dana — da se svaka ranija smena može otvoriti i ispraviti */
+  var svi = sveSmene().slice().sort(function(a,b){ return b.pocetak-a.pocetak; });
+  if(svi.length > 1){
+    h += '<div class="row" style="flex-wrap:wrap;gap:6px">';
+    for(i=0;i<Math.min(svi.length,12);i++)
+      h += '<button class="chip'+(svi[i].pocetak===sm.pocetak?" on":"")+'" data-act="izbor-dana" data-p="'+svi[i].pocetak+'">'
+        +  datumTekst(svi[i].datum)+(svi[i].kraj?"":" •")+'</button>';
+    h += '</div>';
+  }
+
+  h += '<div class="card stack">'
+    +  '<div class="row"><div><div class="lbl">'+(sm.kraj?"Završena":"U toku")+(sm.smena?" · "+sm.smena.toLowerCase()+" smena":"")+'</div>'
+    +  '<div style="font-size:17px;font-weight:700">'+datumTekst(sm.datum)+' · '+sat(sm.pocetak)+'–'+sat(sm.kraj||sm.kraj_plan)+'</div></div>'
+    +  '<div class="sp"></div><div style="text-align:right"><div class="num '+kl(o.razlika)+'" style="font-size:26px;font-weight:600">'
+    +  pct(o.razlika)+'</div><div class="tiny muted">razlika</div></div></div>'
+    +  '<div class="scroll"><table><thead><tr><th>Zona</th><th>Vreme</th><th>Prazan hod</th><th>Pozicije</th><th>Ostvareno</th><th>Norma</th><th>Odst.</th></tr></thead><tbody>';
+  for(z in o.zone){
+    var d=o.zone[z];
+    h += '<tr><td>'+z+'</td><td>'+cel(d.min)+'</td><td class="muted">'+cel(d.praz)+'</td><td>'+cel(d.poz)+'</td>'
+      +  '<td>'+br(d.tempo,0)+'</td><td>'+(d.norma||"—")+'</td>'
+      +  '<td class="'+kl(d.odst)+'">'+pct(d.odst,0)+'</td></tr>';
+  }
+  h += '<tr><td>UK</td><td>'+cel(o.ukMin)+'</td><td class="muted">'+cel(o.prazMin)+'</td><td>'+cel(o.ukPoz)+'</td>'
+    +  '<td>'+br(o.ostvareni)+'</td><td>'+br(o.trazeni)+'</td>'
+    +  '<td class="'+kl(o.razlika)+'">'+pct(o.razlika)+'</td></tr>'
+    +  '</tbody></table></div>'
+    +  '<div class="tiny muted">Prazan hod je uračunat u vreme zone u kojoj si tada bio i zato joj obara tempo. '
+    +  'Da ti minuti kod njih završe u nekoj zoni — sigurno je, jer zbir vremena po zonama daje ceo fond minus čekanje. '
+    +  'Po kom pravilu biraju zonu kad si na granici, ne znamo; na ukupan tempo to ne utiče.</div>'
+    +  '<div class="mini" style="border-top:1px solid var(--line);padding-top:11px">'
+    +    minicol("Čekanje", cel(o.cekMin)+" min", "odbijeno od obračuna")
+    +    minicol("Prazan hod", cel(o.prazMin)+" min", "ostaje u normi")
+    +    minicol("Pauza", cel(o.pauMin)+" min", "ostaje u normi")
+    +    minicol("Brzina u nalozima", o.nalogTempo!=null?br(o.nalogTempo,0)+" poz/h":"—", "bez praznog hoda i pauze")
+    +  '</div>'
+    +  '<div class="tiny muted">Kontrola: '+cel(o.ukMin)+' + '+cel(o.cekMin)+' = '+cel(o.ukMin+o.cekMin)+' min od početka do kraja smene.</div>'
+    +  (sm.kasnjenje>0
+        ? '<div class="row" style="border-top:1px solid var(--line);padding-top:9px">'
+          + '<div class="lbl">Kašnjenje u smenu</div><div class="sp"></div>'
+          + '<div class="num b" style="font-size:17px;font-weight:600">'+sm.kasnjenje+' min</div></div>'
+        : '')
+    +  '</div>';
+
+  h += prazanKartica(sm, o);
+  h += pauzaKartica(sm, o);
+  h += cekanjaKartica(sm, o, true);
+
+  /* tok dana */
+  h += '<div class="card"><div class="lbl" style="margin-bottom:6px">Tok dana</div>';
+  var lista = sm.dogadjaji.slice().sort(function(a,b){return a.t-b.t;});
+  for(i=0;i<lista.length;i++){
+    var e=lista[i], txt;
+    if(e.tip==="zona") txt = "zona → "+e.zona;
+    else if(e.tip==="cekanje") txt = "čekanje počelo" + (e.kod ? " · pozicija "+kodTekst(e.kod) : "");
+    else if(e.tip==="nastavak") txt = "nastavak rada";
+    else if(e.tip==="pauza") txt = "pauza";
+    else if(e.tip==="kraj_pauze") txt = "kraj pauze";
+    else if(e.tip==="nalog_poc") txt = "uzet nalog";
+    else if(e.tip==="nalog") txt = "nalog završen · "+e.poz+" pozicija";
+    else continue;
+    h += '<div class="ev"><span>'+sat(e.t)+'</span>'+txt+'</div>';
+  }
+  h += '</div>';
+
+  h += nalozeKartica(sm, o, 0);
+
+  /* kontrola i greške za ovu smenu */
+  var dk = sm.kontrolisane||0, dg = sm.greske||0;
+  var dp = dk>0 ? dg/dk*100 : null;
+  h += '<div class="card"><div class="lbl">Greške komisioniranja</div>'
+    +  '<div class="tiny muted" style="margin:4px 0 2px">Upiši kad ti kontrola javi za ovu smenu.</div>'
+    +  '<div class="f"><label>Kontrolisanih pozicija</label>'
+    +   '<input type="number" inputmode="numeric" data-act="dan-kontrolisane" data-p="'+sm.pocetak+'" value="'+(dk||"")+'"></div>'
+    +  '<div class="f"><label>Grešaka</label>'
+    +   '<input type="number" inputmode="numeric" data-act="dan-greske" data-p="'+sm.pocetak+'" value="'+(dg||"")+'"></div>'
+    +  '<div class="f"><label>Procenat</label><b class="num'+(dp!=null&&dp>0?" b":"")+'">'
+    +   (dp!=null?br(dp,2)+"%":"—")+'</b></div></div>';
+
+  h += '<button class="btn wide ghost" data-act="kopiraj-dan">Kopiraj izveštaj dana</button>';
+  h += sm.kraj
+     ? '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-dan" data-p="'+sm.pocetak+'">Obriši celu ovu smenu</button>'
+     : '<button class="btn wide ghost" style="color:var(--bad)" data-act="m-odustani">Obriši smenu koja traje</button>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- MESEC ---- */
+function viewMesec(){
+  var mk = aktivanMesec();
+  if(!mk) return '<div class="card"><div class="empty">Kad zatvoriš prvu smenu, ovde se skuplja mesec.</div></div>';
+  var svi = sveSmene(), kljucevi = mesecniKljucevi(), i;
+
+  var dani=[], uk={zone:{},ukMin:0,ukPoz:0,potMin:0,cekMin:0,pauMin:0}, z, j;
+  var poPoziciji={}, brCekanja=0, kasnMin=0, kasnPuta=0, prazBroj=0, prazNaj=0, prazPreko=0,
+      mojeK=0, mojeG=0;
+  for(i=0;i<svi.length;i++){
+    if(mesKljuc(svi[i].datum)!==mk) continue;
+    var o = obracun(svi[i], svi[i].kraj||Date.now());
+    dani.push({sm:svi[i], o:o});
+    uk.ukMin+=o.ukMin; uk.ukPoz+=o.ukPoz; uk.potMin+=o.potMin; uk.cekMin+=o.cekMin; uk.pauMin+=o.pauMin;
+    uk.prazMin=(uk.prazMin||0)+o.prazMin; uk.nalogMin=(uk.nalogMin||0)+o.nalogMin;
+    for(z in o.zone){
+      if(!uk.zone[z]) uk.zone[z]={min:0,poz:0,praz:0};
+      uk.zone[z].min+=o.zone[z].min; uk.zone[z].poz+=o.zone[z].poz;
+      uk.zone[z].praz+=o.zone[z].praz||0;
+    }
+    if(svi[i].kasnjenje>0){ kasnMin += svi[i].kasnjenje; kasnPuta++; }
+    mojeK += svi[i].kontrolisane||0; mojeG += svi[i].greske||0;
+    for(j=0;j<o.tl.praz.length;j++){
+      var pd=(o.tl.praz[j].kraj-o.tl.praz[j].poc)/60000;
+      if(pd<0.5) continue;
+      prazBroj++;
+      if(pd>prazNaj) prazNaj=pd;
+      if(pd>=(S.pragPrazan||5)) prazPreko++;
+    }
+    for(j=0;j<o.tl.cek.length;j++){
+      var w=o.tl.cek[j], kljuc = w.kod ? kodTekst(w.kod) : "bez oznake";
+      if(!poPoziciji[kljuc]) poPoziciji[kljuc]={min:0,puta:0};
+      poPoziciji[kljuc].min += (w.kraj-w.poc)/60000;
+      poPoziciji[kljuc].puta++;
+      brCekanja++;
+    }
+  }
+  var meri = uk.ukMin>=1 && uk.ukPoz>0 && uk.potMin>0;
+  var ostv = meri ? uk.ukPoz/uk.ukMin*60 : null;
+  var traz = meri ? uk.ukPoz/uk.potMin*60 : null;
+  var raz  = meri ? (uk.potMin/uk.ukMin-1)*100 : null;
+
+  var h='<div class="stack">';
+  h += '<div class="row" style="flex-wrap:wrap;gap:6px">';
+  for(i=0;i<kljucevi.length;i++)
+    h += '<button class="chip'+(kljucevi[i]===mk?" on":"")+'" data-act="mesec" data-m="'+kljucevi[i]+'">'+imeMeseca(kljucevi[i])+'</button>';
+  h += '</div>';
+
+  h += '<div class="hero '+(raz==null?"":(raz>=0?"up":"down"))+'"><div class="body">'
+    + '<div class="lbl">'+imeMeseca(mk)+' · '+dani.length+' smena</div>'
+    + '<div class="big">'+(raz!=null?pct(raz).replace("%",""):"—")+'<span class="u">'+(raz!=null?"%":"")+'</span></div>'
+    + '<div class="cmp">'
+    +   '<div><span class="lbl">Ostvareno</span><b>'+br(ostv)+'</b></div>'
+    +   '<div><span class="lbl">Traženo</span><b>'+br(traz)+'</b></div>'
+    +   '<div><span class="lbl">Pozicija</span><b>'+cel(uk.ukPoz)+'</b></div>'
+    +   '<div><span class="lbl">Minuta</span><b>'+cel(uk.ukMin)+'</b></div>'
+    + '</div></div><div class="gauge"><i style="width:'+(raz!=null?Math.max(4,Math.min(100,(ostv/traz)*100)):0)+'%"></i></div></div>';
+
+  h += '<div class="card"><div class="lbl" style="margin-bottom:6px">Po zonama — isti raspored kao na papiru</div><div class="scroll"><table>'
+    + '<thead><tr><th>Zona</th><th>Vreme</th><th>Prazan hod</th><th>Pozicije</th><th>Ostvareno</th><th>Norma</th><th>Odst.</th></tr></thead><tbody>';
+  for(z in uk.zone){
+    var d=uk.zone[z], n=S.norme[z]||0, t=d.min>=1?d.poz/d.min*60:null,
+        od=(n>0&&t!=null)?(t/n-1)*100:null;
+    h += '<tr><td>'+z+'</td><td>'+cel(d.min)+'</td><td class="muted">'+cel(d.praz)+'</td><td>'+cel(d.poz)+'</td>'
+      +  '<td>'+br(t,0)+'</td><td>'+(n||"—")+'</td>'
+      +  '<td class="'+kl(od)+'">'+pct(od,0)+'</td></tr>';
+  }
+  h += '<tr><td>UK</td><td>'+cel(uk.ukMin)+'</td><td class="muted">'+cel(uk.prazMin||0)+'</td><td>'+cel(uk.ukPoz)+'</td>'
+    +  '<td>'+br(ostv)+'</td><td>'+br(traz)+'</td>'
+    +  '<td class="'+kl(raz)+'">'+pct(raz)+'</td></tr></tbody></table></div></div>';
+
+  h += '<div class="card"><div class="lbl" style="margin-bottom:2px">Smene</div><div class="scroll"><table>'
+    + '<thead><tr><th>Dan</th><th>Minuti</th><th>Pozicije</th><th>Ostvareno</th><th>Razlika</th><th></th></tr></thead><tbody>';
+  for(i=dani.length-1;i>=0;i--){
+    var dd=dani[i];
+    h += '<tr><td>'+datumTekst(dd.sm.datum)+(dd.sm.kraj?"":" •")+'</td><td>'+cel(dd.o.ukMin)+'</td><td>'+cel(dd.o.ukPoz)+'</td>'
+      +  '<td>'+br(dd.o.ostvareni,0)+'</td><td class="'+kl(dd.o.razlika)+'">'+pct(dd.o.razlika)+'</td>'
+      +  '<td>'+(dd.sm.kraj
+            ? '<button class="x" data-act="brisi-dan" data-p="'+dd.sm.pocetak+'" aria-label="Obriši smenu">✕</button>'
+            : '')+'</td></tr>';
+  }
+  h += '</tbody></table></div>'
+    +  '<div class="tiny muted" style="padding-top:8px">Smena sa tačkom je ona koja još traje. Krstićem brišeš probnu ili pogrešno upisanu.</div></div>';
+
+  var mesNalogTempo = (uk.nalogMin>=1 && uk.ukPoz>0) ? uk.ukPoz/uk.nalogMin*60 : null;
+  var prag = S.pragPrazan||5;
+  h += '<div class="card"><div class="row" style="margin-bottom:8px"><div class="lbl">Prazan hod u mesecu</div>'
+    +  '<div class="sp"></div><div class="tiny muted">'+prazBroj+' zastoja</div></div>'
+    +  '<div class="mini">'
+    +   minicol("Ukupno", cel(uk.prazMin||0)+" min",
+               dani.length?"oko "+cel((uk.prazMin||0)/dani.length)+" min po smeni":"")
+    +   minicol("Najduži", cel(prazNaj)+" min", "u jednom komadu")
+    +   minicol("Preko "+prag+" min", prazPreko+"×", prazPreko?"ove prvo skrati":"nema takvih")
+    +   minicol("Brzina u nalozima", mesNalogTempo!=null?br(mesNalogTempo,0)+" poz/h":"—",
+               (ostv!=null&&mesNalogTempo!=null) ? "zvanično "+br(ostv,0) : "bez zastoja")
+    +  '</div>'
+    +  (uk.prazMin>=1 && traz!=null
+        ? '<div class="tiny muted" style="padding-top:10px">Da si to vreme bio u nalogu, uradio bi oko '
+          + cel(uk.prazMin/60*traz)+' pozicija više.</div>'
+        : '')
+    +  '</div>';
+
+  h += '<div class="card"><div class="mini">'
+    +   minicol("Pauza", cel(uk.pauMin)+" min", "ulazi u normu")
+    +   minicol("Čekanje", cel(uk.cekMin)+" min", "jedino odbijeno")
+    +  '</div></div>';
+
+  h += '<div class="card"><div class="row"><div><div class="lbl">Kašnjenje u smenu</div>'
+    + '<div class="num'+(kasnMin>0?" b":"")+'" style="font-size:24px;font-weight:600;margin-top:2px">'
+    +   (kasnMin>0 ? cel(kasnMin)+' min' : 'nijednom')+'</div></div>'
+    + '<div class="sp"></div><div class="tiny muted" style="text-align:right;max-width:170px">'
+    + (kasnMin>0 ? kasnPuta+' od '+dani.length+' smena · prosečno '+cel(kasnMin/kasnPuta)+' min'
+                 : 'sve smene započete na vreme')+'</div></div></div>';
+
+  /* koliko te koja pozicija košta — ovo je ono što se prijavljuje i čime se brani mesec */
+  var kljuceviPoz = Object.keys(poPoziciji).sort(function(a,b){ return poPoziciji[b].min-poPoziciji[a].min; });
+  h += '<div class="card"><div class="row" style="margin-bottom:2px"><div class="lbl">Čekanja u mesecu</div>'
+    + '<div class="sp"></div><div class="tiny muted">'+brCekanja+' · ukupno '+cel(uk.cekMin)+' min</div></div>';
+  if(!kljuceviPoz.length){
+    h += '<div class="empty">Nema evidentiranih čekanja.</div>';
+  } else {
+    h += '<div class="scroll"><table><thead><tr><th>Pozicija</th><th>Puta</th><th>Minuta</th></tr></thead><tbody>';
+    for(i=0;i<Math.min(kljuceviPoz.length,10);i++){
+      var kp=kljuceviPoz[i];
+      h += '<tr><td>'+esc(kp)+'</td><td>'+poPoziciji[kp].puta+'</td><td>'+cel(poPoziciji[kp].min)+'</td></tr>';
+    }
+    h += '</tbody></table></div>';
+    if(kljuceviPoz.length>10) h += '<div class="tiny muted" style="padding-top:8px">Prikazano deset najskupljih od '+kljuceviPoz.length+'.</div>';
+  }
+  h += '</div>';
+
+  var g = S.greske[mk] || {kontrolisane:"",greske:""};
+  var proc = (g.kontrolisane>0) ? (g.greske/g.kontrolisane*100) : null;
+  var mojProc = mojeK>0 ? mojeG/mojeK*100 : null;
+  h += '<div class="card"><div class="lbl">Greške komisioniranja</div>'
+    + '<div class="mini" style="margin:8px 0 12px">'
+    +   minicol("Tvoja evidencija", mojProc!=null?br(mojProc,2)+"%":"—",
+               mojeK>0 ? mojeG+" od "+cel(mojeK)+" kontrolisanih" : "upiši po smenama, u kartici Dan")
+    +   minicol("Sa njihovog izveštaja", proc!=null?br(proc,2)+"%":"—",
+               g.kontrolisane>0 ? g.greske+" od "+cel(g.kontrolisane) : "upiši kad stigne")
+    + '</div>'
+    + (mojProc!=null && proc!=null && Math.abs(mojeG-g.greske)>0
+        ? '<div class="tiny muted" style="margin:-4px 0 10px">Razlika: ti si upisao '+mojeG
+          +', izveštaj kaže '+g.greske+'. Proveri koje smene fale.</div>' : '')
+    + '<div class="f"><label>Kontrolisanih — sa izveštaja</label><input type="number" inputmode="numeric" data-act="gk" value="'+esc(g.kontrolisane)+'"></div>'
+    + '<div class="f"><label>Grešaka — sa izveštaja</label><input type="number" inputmode="numeric" data-act="gg" value="'+esc(g.greske)+'"></div></div>';
+
+  h += '<button class="btn wide ghost" data-act="kopiraj-mesec">Kopiraj izveštaj meseca</button>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- NORME ---- */
+function viewNorme(){
+  var h='<div class="stack">', si;
+
+  h += '<div class="card"><div class="lbl">Smene</div>'
+    +  '<div class="tiny muted" style="margin:4px 0 2px">Zvanično radno vreme. Obračun uvek teče od početka smene, '
+    +  'pa se kašnjenje vidi kao izgubljeni minuti — isto kao kod poslodavca.</div>';
+  for(si=0;si<S.smeneDef.length;si++){
+    h += '<div class="f"><label>'+S.smeneDef[si].ime+'</label>'
+      +  '<input type="time" data-act="def-poc" data-i="'+si+'" value="'+S.smeneDef[si].poc+'" style="width:100px">'
+      +  '<input type="time" data-act="def-kraj" data-i="'+si+'" value="'+S.smeneDef[si].kraj+'" style="width:100px"></div>';
+  }
+  h += '<div class="f"><label>Upozori na prazan hod posle (min)</label>'
+    +  '<input type="number" inputmode="numeric" data-act="prag" value="'+(S.pragPrazan||5)+'"></div>'
+    +  '<div class="tiny muted">Kad zastoj između naloga pređe ovoliko, ekran pocrveni.</div>'
+    +  '<div class="f"><label>Fond pauze po smeni (min)</label>'
+    +  '<input type="number" inputmode="numeric" data-act="pauza-fond" value="'+(S.pauzaFond||60)+'"></div>';
+  h += '</div>';
+
+  h += '<div class="card">'
+   + '<div class="lbl">Norme po zonama</div>'
+   + '<div class="tiny muted" style="margin:4px 0 2px">Minimalni definisani učinak, pozicija na sat. Kvačica znači da se zona prikazuje na glavnom ekranu.</div>';
+  var z;
+  for(z in S.norme){
+    h += '<div class="f"><input type="checkbox" data-act="akt" data-z="'+z+'"'+(S.aktivne.indexOf(z)>=0?" checked":"")+'>'
+      +  '<label>'+z+'</label>'
+      +  '<input type="number" inputmode="numeric" data-act="norma" data-z="'+z+'" value="'+(S.norme[z])+'"></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="card"><div class="lbl">Kako se računa</div>'
+    + '<div class="small muted" style="margin-top:6px">'
+    + 'Minuti zone = vreme provedeno u zoni minus evidentirano čekanje. Pauza <b>ostaje</b> u radnom vremenu, kao na izveštaju.<br><br>'
+    + 'Ostvareni učinak = ukupne pozicije ÷ ukupni minuti × 60.<br><br>'
+    + 'Traženi učinak nije prosek normi nego je ponderisan tvojim pozicijama: za svaku zonu se izračuna koliko bi ti minuta trebalo po normi, '
+    + 'pa se ukupne pozicije podele tim zbirom. Zato ti sat u FT (norma 76) diže rezultat, a sat u F7 (norma 106) ga obara.<br><br>'
+    + 'Razlika = ostvareni ÷ traženi − 1.'
+    + '</div></div>';
+
+  h += '<div class="card"><div class="lbl">Podaci</div>'
+    + '<div class="tiny muted" style="margin:5px 0 8px">Sve stoji samo u ovom telefonu. Kopiraj tekst ispod na sigurno mesto s vremena na vreme.</div>'
+    + '<textarea id="dump">'+esc(JSON.stringify({norme:S.norme,aktivne:S.aktivne,smeneDef:S.smeneDef,dani:S.dani,greske:S.greske}))+'</textarea>'
+    + '<div class="row" style="margin-top:8px"><button class="btn ghost" style="flex:1;min-height:46px" data-act="kopiraj-sve">Kopiraj sve</button>'
+    + '<button class="btn ghost" style="flex:1;min-height:46px" data-act="vrati">Vrati iz polja</button></div>'
+    + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati.</div></div>';
+
+  h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve podatke</button>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- OVERLAYI ---- */
+function ovKeypad(){
+  var v = keypad.v, kod = keypad.rezim==="kod", stavke = keypad.rezim==="stavke", i;
+  var h = '<div class="ov" data-act="zatvori-ov"><div class="pan" data-stop="1">';
+
+  if(stavke){
+    var zz = trenutnaZona(S.smena), nn = S.norme[zz]||0, br_ = parseInt(v,10)||0;
+    h += '<div class="lbl" style="text-align:center">Koliko stavki ima nalog</div>'
+      +  '<div class="kdisp"><span class="v">'+(v||"0")+'</span><span class="z">'+(zz||"")+'</span></div>'
+      +  '<div class="tiny muted" style="text-align:center;margin:-8px 0 12px">'
+      +  (br_>0 && nn ? 'po normi '+nn+' imaš <b>'+cel(br_/nn*60)+' min</b> za ovaj nalog'
+                      : 'vreme naloga kreće čim upišeš')+'</div>';
+  } else if(kod){
+    h += '<div class="lbl" style="text-align:center">Oznaka pozicije koja se čeka</div>'
+      +  '<div class="kdisp"><span class="v" style="font-size:44px">'+(kodTekst(v)||"—")+'</span></div>'
+      +  '<div class="tiny muted" style="text-align:center;margin:-8px 0 12px">'
+      +  (keypad.staro
+          ? 'ranije upisano: '+kodTekst(keypad.staro)+' · kucaj novu ili ostavi ovu'
+          : 'osam cifara, npr. 240-190-02 · crtice se same upisuju')+'</div>';
+  } else {
+    h += '<div class="kdisp"><span class="v">'+(v||"0")+'</span><span class="z">'+keypad.z+'</span></div>';
+  }
+
+  h += '<div class="pad">';
+  var k=["1","2","3","4","5","6","7","8","9"];
+  for(i=0;i<9;i++) h += '<button data-act="k" data-k="'+k[i]+'">'+k[i]+'</button>';
+  h += '<button class="del" data-act="k" data-k="del">⌫</button>'
+    +  '<button data-act="k" data-k="0">0</button>'
+    +  '<button class="ok" data-act="k" data-k="ok">'+(kod?"Sačuvaj":"Kreni")+'</button>'
+    +  '</div>';
+  if(kod) h += '<button class="btn ghost wide" style="margin-top:8px;min-height:46px" data-act="k" data-k="posle">'
+             + 'Kasnije — samo meri vreme</button>';
+  h += '</div></div>';
+  return h;
+}
+function ovSheet(){
+  var h='<div class="ov" data-act="zatvori-ov"><div class="pan" data-stop="1">';
+  if(sheet==="meni"){
+    var sm=S.smena;
+    h += '<div class="menu">'
+      + mi("pauza", pauzira(sm)?"⏵":"⏸", pauzira(sm)?"Završi pauzu":"Počni pauzu", "")
+      + mi("ponisti","↶","Poništi poslednji nalog","")
+      + mi("vremena","🕗","Ispravi vremena smene","")
+      + '<div style="height:1px;background:var(--line);margin:6px 0"></div>'
+      + mi("zavrsi","■","Završi smenu","")
+      + mi("odustani","✕","Odustani — obriši ovu smenu","danger")
+      + '</div>';
+  } else if(sheet==="odakle"){
+    var sd=Date.now(), di=izabranaSmena(sd), dfn=S.smeneDef[di];
+    var zp=tsNaDan(sd, dfn.poc), gap=Math.round((sd-zp)/60000);
+    h += '<div class="lbl">Odakle da merim</div>'
+      +  '<div class="small" style="margin:8px 0 14px">Smena je počela u <b>'+dfn.poc+'</b>, a sada je <b>'+sat(sd)+'</b> — '
+      +  'prošlo je '+trajanje(gap)+'. Šta da radim sa tim vremenom?</div>'
+      +  '<button class="btn main wide" style="min-height:56px" data-act="odakle-pocetak">'
+      +    'Radio sam od '+dfn.poc+'</button>'
+      +  '<div class="tiny muted" style="margin:6px 2px 12px">Broji ceo fond kao kod njih. Stavke odrađene pre '
+      +    sat(sd)+' upisuješ ručno, inače tempo ispadne nizak.</div>'
+      +  '<button class="btn ghost wide" style="min-height:52px" data-act="odakle-sada">'
+      +    'Merim tek od '+sat(sd)+'</button>'
+      +  '<div class="tiny muted" style="margin:6px 2px 0">Za probu ili kad si tek stigao. '
+      +    'Tada procenat neće odgovarati njihovom, jer ne pokriva celu smenu.</div>';
+  } else if(sheet==="pitanje" && pitanje){
+    h += '<div class="lbl">Potvrdi</div>'
+      +  '<div style="font-size:16px;margin:10px 0 16px">'+esc(pitanje.tekst)+'</div>'
+      +  '<button class="btn wide" style="min-height:54px;background:var(--bad);border-color:var(--bad);color:#fff" '
+      +    'data-act="pitanje-da">'+esc(pitanje.dugme)+'</button>'
+      +  '<button class="btn ghost wide" style="margin-top:8px;min-height:48px" data-act="zatvori-ov">Odustani</button>';
+  } else if(sheet==="tekst" && tekstZaPrikaz){
+    h += '<div class="lbl">Označi i kopiraj</div>'
+      +  '<textarea readonly style="margin-top:8px;min-height:190px">'+esc(tekstZaPrikaz)+'</textarea>'
+      +  '<button class="btn ghost wide" style="margin-top:8px;min-height:48px" data-act="zatvori-ov">Zatvori</button>';
+  } else if(sheet==="rezultat"){
+    var sm3=S.smena, o3=obracun(sm3, Date.now());
+    var n3=o3.tl.nal.length ? o3.tl.nal[o3.tl.nal.length-1] : null;
+    var st=n3?nalogStat(o3.tl,n3):null;
+    if(st){
+      var dobar = st.odst!=null && st.odst>=0;
+      h += '<div class="lbl" style="text-align:center">Nalog završen · '+n3.poz+' stavki · '+(n3.zona||"")+'</div>'
+        +  '<div style="text-align:center;padding:10px 0 4px">'
+        +   '<div class="num" style="font-size:52px;font-weight:600;letter-spacing:-.03em;color:var(--'+(dobar?"good":"bad")+')">'
+        +     pct(st.odst)+'</div>'
+        +   '<div class="tiny muted">'+(dobar?"iznad norme":"ispod norme")+' '+(st.norma||"—")+' · '+br(st.tempo,0)+' poz/h</div>'
+        +  '</div>'
+        +  '<div class="mini" style="margin:12px 0 14px">'
+        +   minicol("Trajao je", cel(st.min)+" min", "od uzimanja do predaje")
+        +   minicol("Po normi", st.normaMin!=null?cel(st.normaMin)+" min":"—",
+                    st.normaMin!=null ? (st.cisto<=st.normaMin ? "uštedeo "+cel(st.normaMin-st.cisto)+" min"
+                                                               : "prekoračio "+cel(st.cisto-st.normaMin)+" min") : "")
+        +   (st.cek>=0.5 ? minicol("Čekanje na dopunu", cel(st.cek)+" min", "skinuto iz vremena") : "")
+        +   (st.pau>=0.5 ? minicol("Pauza unutar naloga", cel(st.pau)+" min", "ostaje u vremenu") : "")
+        +  '</div>'
+        +  (st.pau>=0.5 && st.odstBP!=null
+            ? '<div class="tiny muted" style="margin:-6px 0 12px">Pauza se po pravilniku ne odbija, pa ulazi u ovih '
+              + cel(st.min)+' min. Da nije nje, nalog bi bio '+pct(st.odstBP)+'.</div>'
+            : '')
+        +  '<button class="btn main wide" style="min-height:56px" data-act="stajem">U redu</button>'
+        +  '<div class="tiny muted" style="text-align:center;margin-top:8px">'
+        +    'posle ovoga teče prazan hod dok ne uzmeš sledeći nalog</div>';
+    } else {
+      h += '<div class="empty">Nema podataka o nalogu.</div>'
+        +  '<button class="btn ghost wide" data-act="zatvori-ov">U redu</button>';
+    }
+  } else if(sheet==="sve-zone"){
+    h += '<div class="lbl" style="margin-bottom:10px">Sve zone</div><div class="zones">';
+    for(var z in S.norme)
+      h += '<button class="z" data-act="zona" data-z="'+z+'"><span class="k">'+z+'</span><span class="v">norma '+S.norme[z]+'</span></button>';
+    h += '</div>';
+  } else if(sheet==="vremena"){
+    var sm2=S.smena;
+    h += '<div class="lbl">Ispravi vremena</div>'
+      + '<div class="tiny muted" style="margin:5px 0">Početak je zvanični početak smene — od njega teče obračun, kao i kod njih.</div>'
+      + '<div class="f"><label>Zvanični početak</label><input type="time" data-act="t-poc" value="'+hhmm(sm2.pocetak)+'"></div>'
+      + '<div class="f"><label>Kraj smene</label><input type="time" data-act="t-kraj" value="'+hhmm(sm2.kraj_plan)+'"></div>'
+      + '<div class="f"><label>Kašnjenje u smenu (min)</label>'
+      +   '<input type="number" inputmode="numeric" data-act="kasnjenje" value="'+(sm2.kasnjenje||0)+'"></div>'
+      + '<div class="tiny muted">'+(sm2.stvarniPocetak
+            ? 'Aplikacija je pokrenuta u '+sat(sm2.stvarniPocetak)+'.'
+            : '')+'</div>'
+      + '<button class="btn wide ghost" style="margin-top:12px" data-act="zatvori-ov">Gotovo</button>';
+  }
+  h += '</div></div>';
+  return h;
+}
+function mi(a,ic,t,c){ return '<button data-act="m-'+a+'" class="'+c+'"><span class="ic">'+ic+'</span>'+t+'</button>'; }
+function hhmm(ts){ var d=new Date(ts);
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+
+/* =========================================================================
+   DOGAĐAJI
+   ========================================================================= */
+var tmr=null;
+function poruka(t){
+  var el=document.getElementById("toast");
+  el.innerHTML='<div class="toast">'+esc(t)+'</div>';
+  clearTimeout(tmr); tmr=setTimeout(function(){el.innerHTML="";},1600);
+}
+
+document.addEventListener("click", function(ev){
+  var el = ev.target.closest("[data-act]");
+  if(!el) return;
+  var a = el.dataset.act;
+
+  if(a==="zatvori-ov"){ if(ev.target.closest("[data-stop]")) return; keypad=null; sheet=null; render(); return; }
+
+  if(a==="zona"){
+    if(S.smena) promeniZonu(el.dataset.z);
+    else { zonaIzbor = el.dataset.z; }
+    sheet=null; render(); return;
+  }
+  if(a==="uvezi-avgust"){ uveziAvgust(); return; }
+  if(a==="preskoci-avgust"){ S.avgustUvezen=true; save(); render(); return; }
+  if(a==="izbor-zone"){ zonaIzbor = el.dataset.z; sheet=null; render(); return; }
+  if(a==="start-smene"){ pocniSmenu(zonaIzbor || S.aktivne[0] || "F6"); return; }
+  if(a==="odakle-pocetak" || a==="odakle-sada"){
+    var sd=Date.now(), di=izabranaSmena(sd), dfn=S.smeneDef[di];
+    var zp=tsNaDan(sd, dfn.poc), gap=Math.round((sd-zp)/60000);
+    if(a==="odakle-pocetak") pokreni(zonaIzbor, zp, dfn, (gap>0&&gap<=90?gap:0), false);
+    else                     pokreni(zonaIzbor, sd, dfn, 0, true);
+    return;
+  }
+  if(a==="izbor-smene"){ smenaIzbor = parseInt(el.dataset.i,10); render(); return; }
+  if(a==="sve-zone"){ sheet="sve-zone"; render(); return; }
+  if(a==="sve-zone-start"){ sheet="sve-zone"; render(); return; }
+  if(a==="nalog"){
+    if(ceka(S.smena)){ poruka("Čekaš dopunu — prvo NASTAVI, pa zatvori nalog"); return; }
+    if(!uNalogu(S.smena)){ poruka("Nisi u nalogu — dodirni POČNI NALOG"); return; }
+    zavrsiNalog(); return;
+  }
+  if(a==="pocni-nalog"){ otvoriUnosStavki(); return; }
+  if(a==="sledeci-nalog"){ sheet=null; otvoriUnosStavki(); return; }
+  if(a==="stajem"){ sheet=null; render(); poruka("Prazan hod teče"); return; }
+  if(a==="ispravi-stavke"){
+    keypad={rezim:"stavke", v:"", ispravka:true}; render(); return;
+  }
+  if(a==="k"){
+    var k=el.dataset.k, kodRezim = keypad.rezim==="kod";
+    if(k==="del"){ keypad.v = keypad.v.slice(0,-1); render(); return; }
+    if(k==="posle"){ keypad=null; render(); poruka("Vreme se meri — oznaku dodaj kasnije"); return; }
+    if(k==="ok"){
+      if(kodRezim){
+        var id=keypad.id, cifre=keypad.v || keypad.staro || ""; keypad=null;
+        upisiKod(id, cifre); render();
+        poruka(cifre ? "Pozicija "+kodTekst(cifre) : "Bez oznake");
+      } else {
+        var n=parseInt(keypad.v,10), kada=keypad.kada, ispravka=keypad.ispravka;
+        keypad=null;
+        if(!(n>0)) { render(); return; }
+        if(ispravka) ispraviStavke(n); else pocniNalog(n, kada);
+      }
+      return;
+    }
+    if(keypad.v.length < (kodRezim?8:4)) keypad.v += k;
+    render(); return;
+  }
+  if(a==="cekaj"){ pocniCekanje(); poruka("Čekanje počelo"); return; }
+  /* ispravka kreće od prazne tastature — stara oznaka stoji kao podsetnik i ostaje ako ne kucaš */
+  if(a==="kod"){ keypad={rezim:"kod", v:"", staro:(el.dataset.kod||""), id:el.dataset.id}; render(); return; }
+  if(a==="brisi-cekanje"){ obrisiCekanje(el.dataset.id); return; }
+  if(a==="nastavi"){ dogadjaj("nastavak"); poruka("Nastavak rada"); return; }
+  if(a==="meni"){ sheet="meni"; render(); return; }
+  if(a==="m-pauza"){ sheet=null; dogadjaj(pauzira(S.smena)?"kraj_pauze":"pauza"); return; }
+  if(a==="m-ponisti"){ sheet=null; ponistiNalog(); return; }
+  if(a==="m-vremena"){ sheet="vremena"; render(); return; }
+  if(a==="pitanje-da"){
+    var akcija = pitanje ? pitanje.akcija : null;
+    pitanje=null; sheet=null;
+    if(akcija) akcija(); else render();
+    return;
+  }
+  if(a==="m-zavrsi"){
+    pitaj("Zatvoriti smenu i upisati je u mesec?", "Zatvori smenu", zavrsiSmenu); return;
+  }
+  if(a==="m-odustani"){
+    pitaj("Obrisati smenu koja traje? Neće ući u mesec i ne može da se vrati.", "Obriši smenu",
+      function(){ S.smena=null; save(); render(); poruka("Smena obrisana"); });
+    return;
+  }
+  if(a==="brisi-dan"){
+    var p=parseInt(el.dataset.p,10);
+    pitaj("Obrisati celu ovu smenu? Ne može da se vrati.", "Obriši smenu", function(){
+      for(var di=0;di<S.dani.length;di++) if(S.dani[di].pocetak===p){ S.dani.splice(di,1); break; }
+      if(danIzbor===p) danIzbor=null;
+      save(); render(); poruka("Smena obrisana");
+    });
+    return;
+  }
+  if(a==="obrisi"){
+    var id=el.dataset.id, sm=smenaPoUnosu(id);
+    if(!sm) return;
+    for(var i=0;i<sm.dogadjaji.length;i++){
+      if(sm.dogadjaji[i].id===id){
+        sm.dogadjaji.splice(i,1);
+        /* skloni i otvaranje tog naloga, inače bi ostao „u toku" */
+        for(var j=i-1;j>=0;j--){
+          if(sm.dogadjaji[j].tip==="nalog"){ break; }
+          if(sm.dogadjaji[j].tip==="nalog_poc"){ sm.dogadjaji.splice(j,1); break; }
+        }
+        break;
+      }
+    }
+    save(); render(); poruka("Nalog obrisan"); return;
+  }
+  if(a==="potvrdi-smenu"){
+    var pp=parseInt(el.dataset.p,10);
+    for(var pi=0;pi<S.dani.length;pi++) if(S.dani[pi].pocetak===pp) delete S.dani[pi].autoZatvorena;
+    save(); render(); poruka("Smena zadržana"); return;
+  }
+  if(a==="izbor-dana"){ danIzbor = parseInt(el.dataset.p,10); tab="dan"; render(); return; }
+  if(a==="mesec"){ mesecIzbor = el.dataset.m; render(); return; }
+  if(a==="kopiraj-cekanja"){ kopiraj(tekstCekanja()); return; }
+  if(a==="kopiraj-dan"){ kopiraj(tekstDana()); return; }
+  if(a==="kopiraj-mesec"){ kopiraj(tekstMeseca()); return; }
+  if(a==="kopiraj-sve"){ kopiraj(document.getElementById("dump").value); return; }
+  if(a==="vrati"){
+    var polje = document.getElementById("dump");
+    var t = polje ? polje.value : "";
+    if(!t){ poruka("Nalepi podatke u polje iznad"); return; }
+    try{ var d=JSON.parse(t);
+      if(d.norme) S.norme=d.norme; if(d.aktivne) S.aktivne=d.aktivne;
+      if(d.smeneDef) S.smeneDef=d.smeneDef; if(d.dani) S.dani=d.dani; if(d.greske) S.greske=d.greske;
+      save(); render(); poruka("Vraćeno iz kopije");
+    }catch(e){ poruka("Tekst nije ispravan"); }
+    return;
+  }
+  if(a==="brisi-sve"){
+    pitaj("Trajno brišeš sve smene i podešavanja. Ovo se ne može vratiti.", "Obriši sve", function(){
+      S.dani=[]; S.smena=null; S.greske={}; save(); render(); poruka("Sve obrisano");
+    });
+    return;
+  }
+});
+
+document.addEventListener("change", function(ev){
+  var el = ev.target.closest("[data-act]"); if(!el) return;
+  var a = el.dataset.act, z = el.dataset.z;
+  if(a==="norma"){ var n=parseInt(el.value,10); if(n>0){ S.norme[z]=n; save(); } return; }
+  if(a==="akt"){
+    var i=S.aktivne.indexOf(z);
+    if(el.checked && i<0) S.aktivne.push(z);
+    if(!el.checked && i>=0) S.aktivne.splice(i,1);
+    save(); return;
+  }
+  if(a==="def-poc"||a==="def-kraj"){
+    var di=parseInt(el.dataset.i,10);
+    if(S.smeneDef[di]) S.smeneDef[di][a==="def-poc"?"poc":"kraj"] = el.value;
+    save(); render(); return;
+  }
+  if(a==="dan-kontrolisane" || a==="dan-greske"){
+    var ds = smenaPoPocetku(parseInt(el.dataset.p,10));
+    if(ds){ ds[a==="dan-kontrolisane"?"kontrolisane":"greske"] = Math.max(0, parseInt(el.value,10)||0);
+            save(); render(); }
+    return;
+  }
+  if(a==="prag"){ S.pragPrazan = Math.max(1, parseInt(el.value,10)||5); save(); render(); return; }
+  if(a==="pauza-fond"){ S.pauzaFond = Math.max(0, parseInt(el.value,10)||0); save(); render(); return; }
+  if(a==="kasnjenje"){
+    if(S.smena){ S.smena.kasnjenje = Math.max(0, parseInt(el.value,10)||0); save(); render(); }
+    return;
+  }
+  if(a==="gk"||a==="gg"){
+    var mk=aktivanMesec(); if(!mk) return;
+    if(!S.greske[mk]) S.greske[mk]={kontrolisane:"",greske:""};
+    S.greske[mk][a==="gk"?"kontrolisane":"greske"] = parseInt(el.value,10)||0;
+    save(); render(); return;
+  }
+  if(a==="t-poc"||a==="t-kraj"){
+    var sm=S.smena; if(!sm) return;
+    var p=el.value.split(":"), d=new Date(sm.pocetak);
+    d.setHours(parseInt(p[0],10), parseInt(p[1],10), 0, 0);
+    if(a==="t-poc"){
+      var trajanjeSm = sm.kraj_plan - sm.pocetak;
+      sm.pocetak = d.getTime();
+      for(var i=0;i<sm.dogadjaji.length;i++) if(sm.dogadjaji[i].tip==="zona"){ sm.dogadjaji[i].t = d.getTime(); break; }
+      sm.kraj_plan = sm.pocetak + trajanjeSm;
+    } else {
+      if(d.getTime()<=sm.pocetak) d.setDate(d.getDate()+1);
+      sm.kraj_plan = d.getTime();
+    }
+    save(); render(); return;
+  }
+});
+
+function kopiraj(t){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){poruka("Kopirano");},function(){pokaziTekst(t);});
+  } else pokaziTekst(t);
+}
+function pokaziTekst(t){ tekstZaPrikaz=t; sheet="tekst"; keypad=null; render(); }
+
+/* spisak čekanja onako kako se prijavljuje */
+function tekstCekanja(){
+  var sm = (tab==="dan") ? smenaZaPrikaz() : (S.smena||S.dani[S.dani.length-1]);
+  if(!sm) return "";
+  var o=obracun(sm, sm.kraj||Date.now()), c=o.tl.cek, i;
+  var s="ČEKANJA — "+datumTekst(sm.datum)+"\n\n";
+  if(!c.length) return s+"Nije bilo čekanja.\n";
+  for(i=0;i<c.length;i++){
+    s += (c[i].kod ? kodTekst(c[i].kod) : "bez oznake")
+      +  "   "+sat(c[i].poc)+"–"+sat(c[i].kraj)
+      +  "   "+cel((c[i].kraj-c[i].poc)/60000)+" min"
+      +  (c[i].zona ? "   "+c[i].zona : "")+"\n";
+  }
+  s += "\nUkupno: "+c.length+" čekanja, "+cel(o.cekMin)+" min\n";
+  return s;
+}
+
+function tekstDana(){
+  var sm = (tab==="dan") ? smenaZaPrikaz() : (S.smena||S.dani[S.dani.length-1]);
+  if(!sm) return "";
+  var o=obracun(sm, sm.kraj||Date.now()), z;
+  var s="TEMPO SMENE — "+datumTekst(sm.datum)+" ("+sat(sm.pocetak)+"–"+sat(sm.kraj||sm.kraj_plan)+")\n"
+      + (sm.smena? sm.smena+" smena\n":"")
+      + (sm.kasnjenje>0 ? "Kašnjenje u smenu: "+sm.kasnjenje+" min\n" : "")
+      + "\n";
+  for(z in o.zone) s += z+"  "+cel(o.zone[z].min)+" min  "+cel(o.zone[z].poz)+" poz  "
+    + br(o.zone[z].tempo,0)+"/h  norma "+o.zone[z].norma+"  "
+    + (o.zone[z].odst!=null?pct(o.zone[z].odst,0):"")+"\n";
+  s += "\nPozicije: "+cel(o.ukPoz)+"\nMinuti rada: "+cel(o.ukMin)+"\nČekanje: "+cel(o.cekMin)+" min (odbijeno)\n"
+    +  "Prazan hod: "+cel(o.prazMin)+" min · pauza: "+cel(o.pauMin)+" min (ulaze u normu)\n"
+    +  "Brzina u nalozima: "+br(o.nalogTempo)+"\n"
+    +  "Traženi učinak: "+br(o.trazeni)+"\nRealizovani učinak: "+br(o.ostvareni)+"\n"
+    +  "Razlika: "+pct(o.razlika)+"\n";
+  if(sm.kontrolisane>0)
+    s += "Greške: "+(sm.greske||0)+" / "+cel(sm.kontrolisane)+" = "+br((sm.greske||0)/sm.kontrolisane*100,2)+"%\n";
+  if(o.tl.cek.length){
+    s += "\nČekanja:\n";
+    for(var i=0;i<o.tl.cek.length;i++){
+      var w=o.tl.cek[i];
+      s += "  "+(w.kod?kodTekst(w.kod):"bez oznake")+"   "+sat(w.poc)+"–"+sat(w.kraj)
+        +  "   "+cel((w.kraj-w.poc)/60000)+" min\n";
+    }
+  }
+  return s;
+}
+function tekstMeseca(){
+  var mk = aktivanMesec(); if(!mk) return "Nema još nijedne smene.";
+  var svi = sveSmene();
+  var uk={}, ukMin=0, ukPoz=0, potMin=0, cekMin=0, br_=0, kasn=0, kasnPuta=0, i, z;
+  for(i=0;i<svi.length;i++){
+    if(mesKljuc(svi[i].datum)!==mk) continue;
+    var o=obracun(svi[i], svi[i].kraj||Date.now()); br_++;
+    if(svi[i].kasnjenje>0){ kasn+=svi[i].kasnjenje; kasnPuta++; }
+    ukMin+=o.ukMin; ukPoz+=o.ukPoz; potMin+=o.potMin; cekMin+=o.cekMin;
+    for(z in o.zone){ if(!uk[z]) uk[z]={min:0,poz:0}; uk[z].min+=o.zone[z].min; uk[z].poz+=o.zone[z].poz; }
+  }
+  var meri = ukMin>=1 && ukPoz>0 && potMin>0;
+  var ostv = meri?ukPoz/ukMin*60:null, traz = meri?ukPoz/potMin*60:null,
+      raz = meri?(potMin/ukMin-1)*100:null;
+  var s="UČINAK KOMISIONIRANJA — "+imeMeseca(mk)+"\n"+br_+" smena\n\n";
+  for(z in uk){
+    var n=S.norme[z]||0, t=uk[z].min>=1?uk[z].poz/uk[z].min*60:null,
+        od=(n>0&&t!=null)?(t/n-1)*100:null;
+    s += z+"  "+cel(uk[z].min)+" min  "+cel(uk[z].poz)+" poz  "+br(t,0)+"/h  norma "+n+"  "+pct(od,0)+"\n";
+  }
+  s += "\nPozicije ukupno: "+cel(ukPoz)+"\nMinuti rada: "+cel(ukMin)+"\nČekanje: "+cel(cekMin)+" min\n"
+    +  "Ukupni traženi učinak: "+br(traz)+"\nRealizovani učinak: "+br(ostv)+"\nRazlika: "+pct(raz)+"\n"
+    +  "Kašnjenje u smenu: "+(kasn>0 ? cel(kasn)+" min u "+kasnPuta+" smena" : "nijednom")+"\n";
+  var g=S.greske[mk];
+  if(g&&g.kontrolisane>0) s += "Greške: "+g.greske+" / "+g.kontrolisane+" = "+br(g.greske/g.kontrolisane*100,2)+"%\n";
+  return s;
+}
+
+/* tabovi + tema */
+document.getElementById("tabs").addEventListener("click", function(ev){
+  var b=ev.target.closest("button"); if(!b) return;
+  tab=b.dataset.tab; render();
+});
+document.getElementById("themeBtn").addEventListener("click", function(){
+  var cur = document.documentElement.getAttribute("data-theme");
+  var next = cur==="light" ? "dark" : (cur==="dark" ? "light" : (matchMedia("(prefers-color-scheme: dark)").matches ? "light":"dark"));
+  document.documentElement.setAttribute("data-theme", next);
+  S.tema = next; save();
+});
+
+/* start */
+load();
+if(S.tema) document.documentElement.setAttribute("data-theme", S.tema);
+render();
+setInterval(function(){ if(tab==="smena" && S.smena && !keypad && !sheet) render(); }, 1000);
+</script>
