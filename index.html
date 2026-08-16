@@ -399,6 +399,14 @@ function kratko(min){
   min = Math.max(0,Math.round(min));
   return Math.floor(min/60)+":"+String(min%60).padStart(2,"0");
 }
+/* odbrojavanje sa sekundama — da se vidi da vreme zaista teče, i u minusu */
+function odbroj(min){
+  var neg = min < 0, s = Math.round(Math.abs(min)*60);
+  var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sek = s%60;
+  var t = h ? h+":"+String(m).padStart(2,"0")+":"+String(sek).padStart(2,"0")
+            : m+":"+String(sek).padStart(2,"0");
+  return (neg?"−":"")+t;
+}
 var MESECI = ["januar","februar","mart","april","maj","jun","jul","avgust","septembar","oktobar","novembar","decembar"];
 function imeMeseca(mk){ var p=mk.split("-"); return MESECI[parseInt(p[1],10)-1]+" "+p[0]; }
 function datumTekst(k){ var p=k.split("-");
@@ -699,6 +707,18 @@ function upisiKod(id, cifre){
     if(sm.dogadjaji[i].tip==="cekanje" && sm.dogadjaji[i].id===id){ sm.dogadjaji[i].kod = cifre; break; }
   save();
 }
+/* naknadno dodavanje čekanja — kad je zaboravljeno u toku smene ili greškom obrisano */
+function dodajCekanje(pocetakSmene, minuta){
+  var sm=smenaPoPocetku(pocetakSmene); if(!sm || !minuta) return;
+  if(!sm.kraj && ceka(sm)){ poruka("Prvo završi čekanje koje traje"); return; }
+  var M=60000, poc=sm.pocetak+M, kraj=poc+minuta*M;
+  var granica = sm.kraj || sm.kraj_plan;
+  if(kraj > granica){ poruka("Toliko čekanja ne staje u smenu"); return; }
+  var id="m"+Date.now();
+  sm.dogadjaji.push({tip:"cekanje", t:poc, kod:"", id:id});
+  sm.dogadjaji.push({tip:"nastavak", t:kraj});
+  save(); render(); poruka("Upisano čekanje "+minuta+" min");
+}
 function obrisiCekanje(id){
   var sm=smenaPoUnosu(id); if(!sm) return;
   for(var i=0;i<sm.dogadjaji.length;i++){
@@ -891,22 +911,25 @@ function viewAktivna(){
   if(uNalogu(sm) && o.tl.nal.length){
     var nt = o.tl.nal[o.tl.nal.length-1], stt = nalogStat(o.tl, nt);
     var proteklo = (sada - nt.poc)/60000;
-    var kasniN = stt.normaMin!=null && stt.cisto > stt.normaMin;
+    var preostaloN = (stt.normaMin!=null) ? stt.normaMin - stt.cisto : null;
+    var kasniN = preostaloN!=null && preostaloN < 0;
     h += '<div class="card"><div class="row" style="align-items:flex-start">'
       +  '<div><div class="lbl">Nalog u toku · '
       +    '<button data-act="ispravi-stavke" style="color:var(--accent);font:inherit;text-transform:none;letter-spacing:0">'
       +      nt.poz+' stavki ✎</button></div>'
-      +  '<div class="num" style="font-size:34px;font-weight:600;line-height:1.05'
-      +    (kasniN?";color:var(--bad)":"")+'">'+kratko(proteklo)+'</div>'
-      +  '<div class="tiny muted">'+(jeCekanje?"stoji dok čekaš dopunu":"teče od "+sat(nt.poc))+'</div></div>'
-      +  '<div class="sp"></div><div style="text-align:right">'
+      +   (preostaloN!=null
+          ? '<div class="num" style="font-size:40px;font-weight:600;line-height:1.02;letter-spacing:-.03em'
+            + (kasniN?";color:var(--bad)":";color:var(--good)")+'">'+odbroj(preostaloN)+'</div>'
+            +'<div class="tiny '+(kasniN?"b":"muted")+'">'
+            + (kasniN ? "preko vremena koje daje norma "+stt.norma
+                      : "do isteka vremena po normi "+stt.norma)+'</div>'
+          : '<div class="num" style="font-size:34px;font-weight:600">'+kratko(proteklo)+'</div>'
+            +'<div class="tiny muted">nema norme za ovu zonu</div>')
+      +  '</div><div class="sp"></div><div style="text-align:right">'
+      +   '<div class="num" style="font-size:20px;font-weight:600">'+kratko(proteklo)+'</div>'
+      +   '<div class="tiny muted">'+(jeCekanje?"stoji dok čekaš":"radiš na njemu")+'</div>'
       +   (stt.normaMin!=null
-          ? '<div class="num" style="font-size:22px;font-weight:600">'+cel(stt.normaMin)+' min</div>'
-            +'<div class="tiny muted">daje ti norma '+(stt.norma||"")+'</div>'
-            +'<div class="tiny '+(kasniN?"b":"g")+'" style="margin-top:4px">'
-            + (kasniN ? "prekoračeno "+cel(stt.cisto-stt.normaMin)+" min"
-                      : "ostalo "+cel(stt.normaMin-stt.cisto)+" min")+'</div>'
-          : '<div class="tiny muted">nema norme za zonu</div>')
+          ? '<div class="tiny muted" style="margin-top:4px">norma daje '+cel(stt.normaMin)+' min</div>' : '')
       +  '</div></div></div>';
   }
 
@@ -986,10 +1009,12 @@ function viewAktivna(){
 /* spisak čekanja — ono što se prijavljuje na kraju smene */
 function cekanjaKartica(sm, o, moze){
   var c=o.tl.cek, i, h;
+  var dodaj = '<button class="btn ghost wide" style="margin-top:10px;min-height:46px" '
+            + 'data-act="dodaj-cekanje" data-p="'+sm.pocetak+'">+ Dodaj čekanje ručno</button>';
   h = '<div class="card"><div class="row" style="margin-bottom:2px"><div class="lbl">Čekanja za prijavu</div>'
     + '<div class="sp"></div><div class="tiny muted">'+c.length+' · ukupno '+cel(o.cekMin)+' min</div></div>';
   if(!c.length){
-    h += '<div class="empty">Danas nije bilo čekanja.</div></div>';
+    h += '<div class="empty">Nije bilo čekanja.</div>'+dodaj+'</div>';
     return h;
   }
   for(i=0;i<c.length;i++){
@@ -1004,7 +1029,8 @@ function cekanjaKartica(sm, o, moze){
       +  (moze?'<button class="x" style="margin-left:8px" data-act="brisi-cekanje" data-id="'+c[i].id+'" aria-label="Obriši">✕</button>':'')
       +  '</div>';
   }
-  h += '<button class="btn wide ghost" style="margin-top:10px;min-height:46px" data-act="kopiraj-cekanja">Kopiraj spisak čekanja</button>';
+  h += dodaj;
+  h += '<button class="btn wide ghost" style="margin-top:8px;min-height:46px" data-act="kopiraj-cekanja">Kopiraj spisak čekanja</button>';
   h += '</div>';
   return h;
 }
@@ -1426,10 +1452,16 @@ function viewNorme(){
 
 /* ---- OVERLAYI ---- */
 function ovKeypad(){
-  var v = keypad.v, kod = keypad.rezim==="kod", stavke = keypad.rezim==="stavke", i;
+  var v = keypad.v, kod = keypad.rezim==="kod", stavke = keypad.rezim==="stavke",
+      cekRez = keypad.rezim==="cek", i;
   var h = '<div class="ov" data-act="zatvori-ov"><div class="pan" data-stop="1">';
 
-  if(stavke){
+  if(cekRez){
+    h += '<div class="lbl" style="text-align:center">Koliko minuta je trajalo čekanje</div>'
+      +  '<div class="kdisp"><span class="v">'+(v||"0")+'</span><span class="z">min</span></div>'
+      +  '<div class="tiny muted" style="text-align:center;margin:-8px 0 12px">'
+      +  'upisuje se na početak smene · oznaku pozicije dodaješ posle, dodirom na red</div>';
+  } else if(stavke){
     var zz = trenutnaZona(S.smena), nn = S.norme[zz]||0, br_ = parseInt(v,10)||0;
     h += '<div class="lbl" style="text-align:center">Koliko stavki ima nalog</div>'
       +  '<div class="kdisp"><span class="v">'+(v||"0")+'</span><span class="z">'+(zz||"")+'</span></div>'
@@ -1452,7 +1484,7 @@ function ovKeypad(){
   for(i=0;i<9;i++) h += '<button data-act="k" data-k="'+k[i]+'">'+k[i]+'</button>';
   h += '<button class="del" data-act="k" data-k="del">⌫</button>'
     +  '<button data-act="k" data-k="0">0</button>'
-    +  '<button class="ok" data-act="k" data-k="ok">'+(kod?"Sačuvaj":"Kreni")+'</button>'
+    +  '<button class="ok" data-act="k" data-k="ok">'+(kod?"Sačuvaj":(cekRez?"Upiši":"Kreni"))+'</button>'
     +  '</div>';
   if(kod) h += '<button class="btn ghost wide" style="margin-top:8px;min-height:46px" data-act="k" data-k="posle">'
              + 'Kasnije — samo meri vreme</button>';
@@ -1605,6 +1637,9 @@ document.addEventListener("click", function(ev){
         var id=keypad.id, cifre=keypad.v || keypad.staro || ""; keypad=null;
         upisiKod(id, cifre); render();
         poruka(cifre ? "Pozicija "+kodTekst(cifre) : "Bez oznake");
+      } else if(keypad.rezim==="cek"){
+        var mn=parseInt(keypad.v,10), ps=keypad.pocetakSmene; keypad=null;
+        if(mn>0) dodajCekanje(ps, mn); else render();
       } else {
         var n=parseInt(keypad.v,10), kada=keypad.kada, ispravka=keypad.ispravka;
         keypad=null;
@@ -1620,6 +1655,9 @@ document.addEventListener("click", function(ev){
   /* ispravka kreće od prazne tastature — stara oznaka stoji kao podsetnik i ostaje ako ne kucaš */
   if(a==="kod"){ keypad={rezim:"kod", v:"", staro:(el.dataset.kod||""), id:el.dataset.id}; render(); return; }
   if(a==="brisi-cekanje"){ obrisiCekanje(el.dataset.id); return; }
+  if(a==="dodaj-cekanje"){
+    keypad={rezim:"cek", v:"", pocetakSmene:parseInt(el.dataset.p,10)}; render(); return;
+  }
   if(a==="nastavi"){ dogadjaj("nastavak"); poruka("Nastavak rada"); return; }
   if(a==="meni"){ sheet="meni"; render(); return; }
   if(a==="m-pauza"){ sheet=null; dogadjaj(pauzira(S.smena)?"kraj_pauze":"pauza"); return; }
