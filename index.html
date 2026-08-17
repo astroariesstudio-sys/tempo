@@ -426,6 +426,8 @@ function razlozi(sm, sada){
   var kraj = sm.kraj || sada;
   var segs=[], cek=[], pau=[], praz=[], nal=[],
       cur=null, cw=null, cp=null, cpr=null, cn=null, uNal=false, i, e;
+  /* od početka smene do prvog uzetog naloga takođe teče prazan hod */
+  cpr = {poc:sm.pocetak, kraj:null}; praz.push(cpr);
   for(i=0;i<sm.dogadjaji.length;i++){
     e = sm.dogadjaji[i];
     if(e.tip==="zona"){ if(cur) cur.kraj=e.t; cur={zona:e.zona,poc:e.t,kraj:null}; segs.push(cur); }
@@ -436,7 +438,8 @@ function razlozi(sm, sada){
     /* prazan hod = od zatvaranja naloga do uzimanja sledećeg */
     else if(e.tip==="nalog_poc"){
       if(cpr){ cpr.kraj=e.t; cpr=null; }
-      uNal=true; cn={poc:e.t, kraj:null, poz:e.poz||0, zona:trenutnaZonaDo(sm,e.t), id:e.id};
+      uNal=true; cn={poc:e.t, kraj:null, poz:e.poz||0, zona:trenutnaZonaDo(sm,e.t),
+                     id:e.id, prekinut:!!e.prekinut};
       nal.push(cn);
     }
     else if(e.tip==="nalog"){
@@ -450,6 +453,16 @@ function razlozi(sm, sada){
   function zatvori(a){ for(var j=0;j<a.length;j++) if(a[j].kraj==null) a[j].kraj=kraj; }
   zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal);
   return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, kraj:kraj};
+}
+
+/* Neto trajanje praznog hoda — bez čekanja i bez pauze koji u njega upadnu.
+   Isto pravilo koje već važi za mesečni zbir, sada i za prikaz uživo. */
+function prazNeto(t, p, doKada){
+  var kraj = (doKada!=null ? Math.min(p.kraj, doKada) : p.kraj);
+  var m = (kraj - p.poc)/60000, j;
+  for(j=0;j<t.cek.length;j++) m -= preklop(p.poc,kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+  for(j=0;j<t.pau.length;j++) m -= preklop(p.poc,kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
+  return Math.max(0,m);
 }
 
 /* Uspešnost jednog naloga. Skida se SAMO čekanje na dopunu — pauza ostaje u vremenu,
@@ -682,6 +695,26 @@ function ispraviStavke(poz){
     if(sm.dogadjaji[i].tip==="nalog_poc"){ sm.dogadjaji[i].poz=poz; break; }
   save(); render(); poruka("Nalog ima "+poz+" stavki");
 }
+/* Nalog koji nije dovršen — kraj smene, prebačaj drugom, prekid.
+   Upisuje se onoliko stavki koliko je STVARNO urađeno; ako nula, nalog se briše
+   i to vreme postaje prazan hod. */
+function prekiniNalog(uradjeno){
+  var sm=S.smena, i; if(!sm || !uNalogu(sm)) return;
+  var otvoren=null, idx=-1;
+  for(i=sm.dogadjaji.length-1;i>=0;i--)
+    if(sm.dogadjaji[i].tip==="nalog_poc"){ otvoren=sm.dogadjaji[i]; idx=i; break; }
+  if(!otvoren) return;
+  if(!uradjeno){
+    sm.dogadjaji.splice(idx,1);
+    save(); render(); poruka("Nalog otkazan — vreme ide u prazan hod");
+    return;
+  }
+  otvoren.poz = uradjeno;
+  otvoren.prekinut = true;
+  var t=Date.now();
+  sm.dogadjaji.push({tip:"nalog", t:t, zona:trenutnaZona(sm), poz:uradjeno, id:t+"_"+uradjeno});
+  save(); sheet="rezultat"; render();
+}
 function zavrsiNalog(){
   var sm=S.smena, i; if(!sm || !uNalogu(sm)) return;
   var otvoren=null;
@@ -885,9 +918,10 @@ function viewAktivna(){
                   +'<span class="tiny muted" style="margin-left:10px">dodirni da ispraviš</span>'
                  : '<span style="color:var(--accent)">+ upiši oznaku pozicije</span>')+'</button>';
   }
-  if(!jeCekanje && !uNalogu(sm)){
+  /* dok traje pauza prazan hod stoji — ne broje se oba u isto vreme */
+  if(!jeCekanje && !jePauza && !uNalogu(sm)){
     var pz = o.tl.praz.length ? o.tl.praz[o.tl.praz.length-1] : null;
-    var traje = pz ? (sada-pz.poc)/60000 : 0;
+    var traje = pz ? prazNeto(o.tl, pz, sada) : 0;
     var prek = traje >= (S.pragPrazan||5);
     h += '<div class="'+(prek?"waitbox":"goal need")+'" style="padding:12px 14px;display:block">'
       +  '<div class="lbl"'+(prek?' style="color:var(--bad)"':'')+'>'
@@ -1050,7 +1084,7 @@ function nalozeKartica(sm, o, granica){
   for(i=lista.length-1; i>=lista.length-n; i--){
     var r=lista[i], st=nalogStat(o.tl, r);
     h += '<div class="ord"><span class="t">'+sat(r.poc)+'</span><span class="zn">'+(r.zona||"")+'</span>'
-      +  '<span class="p" style="width:52px">'+r.poz+'</span>'
+      +  '<span class="p" style="width:52px">'+r.poz+(r.prekinut?'<span class="tiny muted">✂</span>':'')+'</span>'
       +  '<span class="tiny muted" style="width:56px">'+cel(st.min)+' min</span>'
       +  '<span class="sp"></span>'
       +  '<span class="num '+kl(st.odst)+'" style="font-weight:600">'+pct(st.odst,0)+'</span>'
@@ -1090,7 +1124,7 @@ function pauzaKartica(sm, o){
 function prazanKartica(sm, o){
   var p=o.tl.praz, prag=S.pragPrazan||5, i, h, naj=0, preko=0, lista=[];
   for(i=0;i<p.length;i++){
-    var d=(p[i].kraj-p[i].poc)/60000;
+    var d=prazNeto(o.tl, p[i]);        // bez pauze i čekanja koji upadnu unutra
     if(d<0.5) continue;
     if(d>naj) naj=d;
     if(d>=prag) preko++;
@@ -1270,7 +1304,7 @@ function viewMesec(){
     if(svi[i].kasnjenje>0){ kasnMin += svi[i].kasnjenje; kasnPuta++; }
     mojeK += svi[i].kontrolisane||0; mojeG += svi[i].greske||0;
     for(j=0;j<o.tl.praz.length;j++){
-      var pd=(o.tl.praz[j].kraj-o.tl.praz[j].poc)/60000;
+      var pd=prazNeto(o.tl, o.tl.praz[j]);
       if(pd<0.5) continue;
       prazBroj++;
       if(pd>prazNaj) prazNaj=pd;
@@ -1463,11 +1497,15 @@ function ovKeypad(){
       +  'upisuje se na početak smene · oznaku pozicije dodaješ posle, dodirom na red</div>';
   } else if(stavke){
     var zz = trenutnaZona(S.smena), nn = S.norme[zz]||0, br_ = parseInt(v,10)||0;
-    h += '<div class="lbl" style="text-align:center">Koliko stavki ima nalog</div>'
+    h += '<div class="lbl" style="text-align:center">'
+      +   (keypad.prekid ? "Koliko stavki je stvarno urađeno"
+                         : (keypad.ispravka ? "Ispravi broj stavki" : "Koliko stavki ima nalog"))+'</div>'
       +  '<div class="kdisp"><span class="v">'+(v||"0")+'</span><span class="z">'+(zz||"")+'</span></div>'
       +  '<div class="tiny muted" style="text-align:center;margin:-8px 0 12px">'
-      +  (br_>0 && nn ? 'po normi '+nn+' imaš <b>'+cel(br_/nn*60)+' min</b> za ovaj nalog'
-                      : 'vreme naloga kreće čim upišeš')+'</div>';
+      +  (keypad.prekid
+          ? 'nalog ima '+keypad.planirano+' stavki · upiši samo urađeno, ostatak se ne broji'
+          : (br_>0 && nn ? 'po normi '+nn+' imaš <b>'+cel(br_/nn*60)+' min</b> za ovaj nalog'
+                         : 'vreme naloga kreće čim upišeš'))+'</div>';
   } else if(kod){
     h += '<div class="lbl" style="text-align:center">Oznaka pozicije koja se čeka</div>'
       +  '<div class="kdisp"><span class="v" style="font-size:44px">'+(kodTekst(v)||"—")+'</span></div>'
@@ -1497,6 +1535,7 @@ function ovSheet(){
     var sm=S.smena;
     h += '<div class="menu">'
       + mi("pauza", pauzira(sm)?"⏵":"⏸", pauzira(sm)?"Završi pauzu":"Počni pauzu", "")
+      + (uNalogu(sm) ? mi("prekini","⊘","Prekini nalog — nije dovršen","") : "")
       + mi("ponisti","↶","Poništi poslednji nalog","")
       + mi("vremena","🕗","Ispravi vremena smene","")
       + '<div style="height:1px;background:var(--line);margin:6px 0"></div>'
@@ -1533,7 +1572,8 @@ function ovSheet(){
     var st=n3?nalogStat(o3.tl,n3):null;
     if(st){
       var dobar = st.odst!=null && st.odst>=0;
-      h += '<div class="lbl" style="text-align:center">Nalog završen · '+n3.poz+' stavki · '+(n3.zona||"")+'</div>'
+      h += '<div class="lbl" style="text-align:center">'+(n3.prekinut?"Nalog prekinut":"Nalog završen")
+        +  ' · '+n3.poz+' stavki · '+(n3.zona||"")+'</div>'
         +  '<div style="text-align:center;padding:10px 0 4px">'
         +   '<div class="num" style="font-size:52px;font-weight:600;letter-spacing:-.03em;color:var(--'+(dobar?"good":"bad")+')">'
         +     pct(st.odst)+'</div>'
@@ -1640,6 +1680,9 @@ document.addEventListener("click", function(ev){
       } else if(keypad.rezim==="cek"){
         var mn=parseInt(keypad.v,10), ps=keypad.pocetakSmene; keypad=null;
         if(mn>0) dodajCekanje(ps, mn); else render();
+      } else if(keypad.prekid){
+        var ur=parseInt(keypad.v,10)||0; keypad=null;
+        prekiniNalog(ur);
       } else {
         var n=parseInt(keypad.v,10), kada=keypad.kada, ispravka=keypad.ispravka;
         keypad=null;
@@ -1661,6 +1704,14 @@ document.addEventListener("click", function(ev){
   if(a==="nastavi"){ dogadjaj("nastavak"); poruka("Nastavak rada"); return; }
   if(a==="meni"){ sheet="meni"; render(); return; }
   if(a==="m-pauza"){ sheet=null; dogadjaj(pauzira(S.smena)?"kraj_pauze":"pauza"); return; }
+  if(a==="m-prekini"){
+    sheet=null;
+    var otv=null;
+    for(var pi=S.smena.dogadjaji.length-1;pi>=0;pi--)
+      if(S.smena.dogadjaji[pi].tip==="nalog_poc"){ otv=S.smena.dogadjaji[pi]; break; }
+    keypad={rezim:"stavke", v:"", prekid:true, planirano:(otv?otv.poz:0)};
+    render(); return;
+  }
   if(a==="m-ponisti"){ sheet=null; ponistiNalog(); return; }
   if(a==="m-vremena"){ sheet="vremena"; render(); return; }
   if(a==="pitanje-da"){
@@ -1670,7 +1721,10 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="m-zavrsi"){
-    pitaj("Zatvoriti smenu i upisati je u mesec?", "Zatvori smenu", zavrsiSmenu); return;
+    pitaj(uNalogu(S.smena)
+        ? "Nalog je još otvoren — njegove stavke se neće upisati. Prvo ga prekini, ili nastavi ovako."
+        : "Zatvoriti smenu i upisati je u mesec?",
+      "Zatvori smenu", zavrsiSmenu); return;
   }
   if(a==="m-odustani"){
     pitaj("Obrisati smenu koja traje? Neće ući u mesec i ne može da se vrati.", "Obriši smenu",
