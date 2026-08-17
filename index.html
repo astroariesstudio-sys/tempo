@@ -257,7 +257,7 @@ var S = {
 };
 var tab = "smena", sheet = null, keypad = null, saveErr = false,
     mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
-    pitanje = null, tekstZaPrikaz = null;
+    pitanje = null, tekstZaPrikaz = null, vremenaZa = null;
 
 /* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
    pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
@@ -426,8 +426,11 @@ function razlozi(sm, sada){
   var kraj = sm.kraj || sada;
   var segs=[], cek=[], pau=[], praz=[], nal=[], spr=[],
       cur=null, cw=null, cp=null, cpr=null, cn=null, cs=null, uNal=false, i, e;
-  /* od početka smene do prvog uzetog naloga takođe teče prazan hod */
-  cpr = {poc:sm.pocetak, kraj:null}; praz.push(cpr);
+  /* Od početka smene do prvog uzetog naloga takođe teče prazan hod — ali tek
+     od trenutka kad si stvarno stigao. Kašnjenje se broji u minute, kao i kod njih,
+     samo se ne upisuje kao zabušavanje na podu. */
+  var pocPraz = (sm.kasnjenje>0) ? sm.pocetak + sm.kasnjenje*60000 : sm.pocetak;
+  cpr = {poc:pocPraz, kraj:null}; praz.push(cpr);
   for(i=0;i<sm.dogadjaji.length;i++){
     e = sm.dogadjaji[i];
     if(e.tip==="zona"){ if(cur) cur.kraj=e.t; cur={zona:e.zona,poc:e.t,kraj:null}; segs.push(cur); }
@@ -1215,7 +1218,9 @@ function viewDan(){
     +  '<div class="row"><div><div class="lbl">'+(sm.kraj?"Završena":"U toku")+(sm.smena?" · "+sm.smena.toLowerCase()+" smena":"")+'</div>'
     +  '<div style="font-size:17px;font-weight:700">'+datumTekst(sm.datum)+' · '+sat(sm.pocetak)+'–'+sat(sm.kraj||sm.kraj_plan)+'</div></div>'
     +  '<div class="sp"></div><div style="text-align:right"><div class="num '+kl(o.razlika)+'" style="font-size:26px;font-weight:600">'
-    +  pct(o.razlika)+'</div><div class="tiny muted">razlika</div></div></div>'
+    +  pct(o.razlika)+'</div>'
+    +  '<button class="tiny" style="color:var(--accent)" data-act="uredi-vremena" data-p="'+sm.pocetak+'">ispravi vremena ✎</button>'
+    +  '</div></div>'
     +  '<div class="scroll"><table><thead><tr><th>Zona</th><th>Vreme</th><th>Prazan hod</th><th>Pozicije</th><th>Ostvareno</th><th>Norma</th><th>Odst.</th></tr></thead><tbody>';
   for(z in o.zone){
     var d=o.zone[z];
@@ -1625,11 +1630,15 @@ function ovSheet(){
       h += '<button class="z" data-act="zona" data-z="'+z+'"><span class="k">'+z+'</span><span class="v">norma '+S.norme[z]+'</span></button>';
     h += '</div>';
   } else if(sheet==="vremena"){
-    var sm2=S.smena;
-    h += '<div class="lbl">Ispravi vremena</div>'
+    var sm2 = smenaPoPocetku(vremenaZa) || S.smena;
+    if(!sm2){ h += '<div class="empty">Nema smene.</div>'
+      + '<button class="btn ghost wide" data-act="zatvori-ov">Zatvori</button></div></div>'; return h; }
+    h += '<div class="lbl">Ispravi vremena · '+datumTekst(sm2.datum)+'</div>'
       + '<div class="tiny muted" style="margin:5px 0">Početak je zvanični početak smene — od njega teče obračun, kao i kod njih.</div>'
       + '<div class="f"><label>Zvanični početak</label><input type="time" data-act="t-poc" value="'+hhmm(sm2.pocetak)+'"></div>'
-      + '<div class="f"><label>Kraj smene</label><input type="time" data-act="t-kraj" value="'+hhmm(sm2.kraj_plan)+'"></div>'
+      + '<div class="f"><label>Kraj smene</label><input type="time" data-act="t-kraj" value="'+hhmm(sm2.kraj||sm2.kraj_plan)+'"></div>'
+      + (sm2.kraj ? '<div class="tiny muted">Ako produžiš kraj, dodato vreme se upisuje kao odlaganje opreme — '
+                  + 'ulazi u minute, ali ne u prazan hod.</div>' : '')
       + '<div class="f"><label>Kašnjenje u smenu (min)</label>'
       +   '<input type="number" inputmode="numeric" data-act="kasnjenje" value="'+(sm2.kasnjenje||0)+'"></div>'
       + '<div class="tiny muted">'+(sm2.stvarniPocetak
@@ -1734,7 +1743,8 @@ document.addEventListener("click", function(ev){
     render(); return;
   }
   if(a==="m-ponisti"){ sheet=null; ponistiNalog(); return; }
-  if(a==="m-vremena"){ sheet="vremena"; render(); return; }
+  if(a==="m-vremena"){ vremenaZa = S.smena ? S.smena.pocetak : null; sheet="vremena"; render(); return; }
+  if(a==="uredi-vremena"){ vremenaZa = parseInt(el.dataset.p,10); sheet="vremena"; render(); return; }
   if(a==="pitanje-da"){
     var akcija = pitanje ? pitanje.akcija : null;
     pitanje=null; sheet=null;
@@ -1834,7 +1844,8 @@ document.addEventListener("change", function(ev){
   if(a==="prag"){ S.pragPrazan = Math.max(1, parseInt(el.value,10)||5); save(); render(); return; }
   if(a==="pauza-fond"){ S.pauzaFond = Math.max(0, parseInt(el.value,10)||0); save(); render(); return; }
   if(a==="kasnjenje"){
-    if(S.smena){ S.smena.kasnjenje = Math.max(0, parseInt(el.value,10)||0); save(); render(); }
+    var smk=smenaPoPocetku(vremenaZa) || S.smena;
+    if(smk){ smk.kasnjenje = Math.max(0, parseInt(el.value,10)||0); save(); render(); }
     return;
   }
   if(a==="gk"||a==="gg"){
@@ -1844,17 +1855,28 @@ document.addEventListener("change", function(ev){
     save(); render(); return;
   }
   if(a==="t-poc"||a==="t-kraj"){
-    var sm=S.smena; if(!sm) return;
+    var sm=smenaPoPocetku(vremenaZa) || S.smena; if(!sm) return;
     var p=el.value.split(":"), d=new Date(sm.pocetak);
     d.setHours(parseInt(p[0],10), parseInt(p[1],10), 0, 0);
     if(a==="t-poc"){
       var trajanjeSm = sm.kraj_plan - sm.pocetak;
+      var pomak = d.getTime() - sm.pocetak;
       sm.pocetak = d.getTime();
       for(var i=0;i<sm.dogadjaji.length;i++) if(sm.dogadjaji[i].tip==="zona"){ sm.dogadjaji[i].t = d.getTime(); break; }
       sm.kraj_plan = sm.pocetak + trajanjeSm;
+      if(sm.kraj!=null) sm.kraj += pomak;
+      vremenaZa = sm.pocetak;
     } else {
       if(d.getTime()<=sm.pocetak) d.setDate(d.getDate()+1);
-      sm.kraj_plan = d.getTime();
+      var novi = d.getTime();
+      if(sm.kraj!=null){
+        /* produžetak zatvorene smene = odlaganje opreme, ne prazan hod */
+        if(novi > sm.kraj) sm.dogadjaji.push({tip:"sprema", t:sm.kraj});
+        sm.kraj = novi;
+        if(sm.kraj_plan < novi) sm.kraj_plan = novi;
+      } else {
+        sm.kraj_plan = novi;
+      }
     }
     save(); render(); return;
   }
