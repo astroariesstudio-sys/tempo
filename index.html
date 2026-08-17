@@ -424,8 +424,8 @@ function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
    ========================================================================= */
 function razlozi(sm, sada){
   var kraj = sm.kraj || sada;
-  var segs=[], cek=[], pau=[], praz=[], nal=[],
-      cur=null, cw=null, cp=null, cpr=null, cn=null, uNal=false, i, e;
+  var segs=[], cek=[], pau=[], praz=[], nal=[], spr=[],
+      cur=null, cw=null, cp=null, cpr=null, cn=null, cs=null, uNal=false, i, e;
   /* od početka smene do prvog uzetog naloga takođe teče prazan hod */
   cpr = {poc:sm.pocetak, kraj:null}; praz.push(cpr);
   for(i=0;i<sm.dogadjaji.length;i++){
@@ -435,6 +435,8 @@ function razlozi(sm, sada){
     else if(e.tip==="nastavak"){ if(cw){ cw.kraj=e.t; cw=null; } }
     else if(e.tip==="pauza"){ if(!cp){ cp={poc:e.t,kraj:null}; pau.push(cp);} }
     else if(e.tip==="kraj_pauze"){ if(cp){ cp.kraj=e.t; cp=null; } }
+    /* spremanje opreme i presvlačenje na kraju smene — vreme se broji, ali nije prazan hod */
+    else if(e.tip==="sprema"){ if(!cs){ cs={poc:e.t,kraj:null}; spr.push(cs);} }
     /* prazan hod = od zatvaranja naloga do uzimanja sledećeg */
     else if(e.tip==="nalog_poc"){
       if(cpr){ cpr.kraj=e.t; cpr=null; }
@@ -451,8 +453,8 @@ function razlozi(sm, sada){
     }
   }
   function zatvori(a){ for(var j=0;j<a.length;j++) if(a[j].kraj==null) a[j].kraj=kraj; }
-  zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal);
-  return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, kraj:kraj};
+  zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal); zatvori(spr);
+  return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, spr:spr, kraj:kraj};
 }
 
 /* Neto trajanje praznog hoda — bez čekanja i bez pauze koji u njega upadnu.
@@ -462,6 +464,7 @@ function prazNeto(t, p, doKada){
   var m = (kraj - p.poc)/60000, j;
   for(j=0;j<t.cek.length;j++) m -= preklop(p.poc,kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
   for(j=0;j<t.pau.length;j++) m -= preklop(p.poc,kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
+  if(t.spr) for(j=0;j<t.spr.length;j++) m -= preklop(p.poc,kraj,t.spr[j].poc,t.spr[j].kraj)/60000;
   return Math.max(0,m);
 }
 
@@ -519,15 +522,13 @@ function obracun(sm, sada){
     zone[z].tempo = zone[z].min>=1 ? zone[z].poz/zone[z].min*60 : null;
     zone[z].odst  = (n>0 && zone[z].tempo!=null) ? (zone[z].tempo/n-1)*100 : null;
   }
-  var cekMin=0, pauMin=0, prazMin=0;
+  var cekMin=0, pauMin=0, prazMin=0, spremMin=0;
   for(i=0;i<t.cek.length;i++) cekMin += (t.cek[i].kraj-t.cek[i].poc)/60000;
   for(i=0;i<t.pau.length;i++) pauMin += (t.pau[i].kraj-t.pau[i].poc)/60000;
+  for(i=0;i<t.spr.length;i++) spremMin += (t.spr[i].kraj-t.spr[i].poc)/60000;
   for(i=0;i<t.praz.length;i++){
-    m = (t.praz[i].kraj-t.praz[i].poc)/60000;
-    /* ako se u praznom hodu čekalo ili pauziralo, ne broji se dvaput */
-    for(j=0;j<t.cek.length;j++) m -= preklop(t.praz[i].poc,t.praz[i].kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
-    for(j=0;j<t.pau.length;j++) m -= preklop(t.praz[i].poc,t.praz[i].kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
-    prazMin += Math.max(0,m);
+    m = prazNeto(t, t.praz[i]);   /* bez čekanja, pauze i spremanja koji upadnu unutra */
+    prazMin += m;
     /* prazan hod pripada zoni u kojoj se desio — kao i kod njih, svaki minut je nečiji */
     for(j=0;j<t.segs.length;j++){
       var up = preklop(t.praz[i].poc,t.praz[i].kraj,t.segs[j].poc,t.segs[j].kraj)/60000;
@@ -539,8 +540,8 @@ function obracun(sm, sada){
   var ostvareni = meri ? ukPoz/ukMin*60 : null;
   var trazeni   = (meri && potMin>0) ? ukPoz/potMin*60 : null;
   var razlika   = (meri && potMin>0) ? (potMin/ukMin-1)*100 : null;
-  var radMin    = Math.max(0, ukMin - pauMin - prazMin*0);
-  var nalogMin  = Math.max(0, ukMin - pauMin - prazMin);   // vreme provedeno u samim nalozima
+  var radMin    = Math.max(0, ukMin - pauMin);
+  var nalogMin  = Math.max(0, ukMin - pauMin - prazMin - spremMin);  // vreme u samim nalozima
 
   /* Živa slika: otvoren nalog se računa kao da će biti završen PO NORMI.
      Zato ne skače na +900% u petom minutu ni na −100% pre prvog naloga —
@@ -574,7 +575,7 @@ function obracun(sm, sada){
               razlika:   (pMeri && pPot>0) ? (pPot/pMin-1)*100 : null};
 
   return {zone:zone, ukMin:ukMin, ukPoz:ukPoz, potMin:potMin, cekMin:cekMin, pauMin:pauMin,
-          prazMin:prazMin, nalogMin:nalogMin, proj:proj,
+          prazMin:prazMin, spremMin:spremMin, nalogMin:nalogMin, proj:proj,
           radMin:radMin, meri:meri, ostvareni:ostvareni, trazeni:trazeni, razlika:razlika,
           radniTempo: (meri && radMin>=1) ? ukPoz/radMin*60 : null,
           nalogTempo: (meri && nalogMin>=1) ? ukPoz/nalogMin*60 : null, tl:t};
@@ -781,12 +782,17 @@ function ponistiNalog(){
   }
   poruka("Nema unetih naloga");
 }
-function zavrsiSmenu(){
+/* doKraja = obračun teče do zvaničnog kraja smene, kao kod njih.
+   Vreme od odlaganja opreme do kraja upisuje se posebno, da ne uđe u prazan hod. */
+function zavrsiSmenu(doKraja){
   var sm=S.smena; if(!sm) return;
-  if(ceka(sm)) sm.dogadjaji.push({tip:"nastavak",t:Date.now()});
-  if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze",t:Date.now()});
-  sm.kraj = Date.now();
-  S.dani.push(sm); S.smena=null; save(); tab="dan"; render();
+  var sada=Date.now();
+  var kraj = doKraja ? sm.kraj_plan : sada;
+  if(doKraja && sada < sm.kraj_plan) sm.dogadjaji.push({tip:"sprema", t:sada});
+  if(ceka(sm))    sm.dogadjaji.push({tip:"nastavak",   t:Math.min(sada,kraj)});
+  if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze", t:Math.min(sada,kraj)});
+  sm.kraj = kraj;
+  S.dani.push(sm); S.smena=null; sheet=null; save(); tab="dan"; render();
   poruka("Smena zatvorena");
 }
 
@@ -1228,7 +1234,8 @@ function viewDan(){
     +    minicol("Čekanje", cel(o.cekMin)+" min", "odbijeno od obračuna")
     +    minicol("Prazan hod", cel(o.prazMin)+" min", "ostaje u normi")
     +    minicol("Pauza", cel(o.pauMin)+" min", "ostaje u normi")
-    +    minicol("Brzina u nalozima", o.nalogTempo!=null?br(o.nalogTempo,0)+" poz/h":"—", "bez praznog hoda i pauze")
+    +    (o.spremMin>=0.5 ? minicol("Odlaganje opreme", cel(o.spremMin)+" min", "kraj smene, u normi") : "")
+    +    minicol("Brzina u nalozima", o.nalogTempo!=null?br(o.nalogTempo,0)+" poz/h":"—", "samo vreme u nalozima")
     +  '</div>'
     +  '<div class="tiny muted">Kontrola: '+cel(o.ukMin)+' + '+cel(o.cekMin)+' = '+cel(o.ukMin+o.cekMin)+' min od početka do kraja smene.</div>'
     +  (sm.kasnjenje>0
@@ -1542,6 +1549,20 @@ function ovSheet(){
       + mi("zavrsi","■","Završi smenu","")
       + mi("odustani","✕","Odustani — obriši ovu smenu","danger")
       + '</div>';
+  } else if(sheet==="kraj-smene"){
+    var ks=S.smena, sd2=Date.now(), ostatak=Math.round((ks.kraj_plan-sd2)/60000);
+    h += '<div class="lbl">Kraj smene</div>'
+      +  '<div class="small" style="margin:8px 0 4px">Smena traje do <b>'+sat(ks.kraj_plan)+'</b>, a sada je <b>'
+      +  sat(sd2)+'</b> — ostalo je '+trajanje(ostatak)+'.</div>'
+      +  (uNalogu(ks) ? '<div class="small" style="color:var(--bad);margin-bottom:8px">Nalog je još otvoren — '
+                      + 'njegove stavke se neće upisati. Prekini ga prvo ako je nešto urađeno.</div>' : '')
+      +  '<button class="btn main wide" style="min-height:56px;margin-top:8px" data-act="kraj-do-kraja">'
+      +    'Računaj do '+sat(ks.kraj_plan)+'</button>'
+      +  '<div class="tiny muted" style="margin:6px 2px 12px">Kao kod njih — ceo fond smene. '
+      +    'Ovih '+ostatak+' min upisuje se kao odlaganje opreme, ne kao prazan hod.</div>'
+      +  '<button class="btn ghost wide" style="min-height:50px" data-act="kraj-do-sada">'
+      +    'Računaj do '+sat(sd2)+'</button>'
+      +  '<div class="tiny muted" style="margin:6px 2px 0">Samo ako si stvarno ranije otišao sa posla.</div>';
   } else if(sheet==="odakle"){
     var sd=Date.now(), di=izabranaSmena(sd), dfn=S.smeneDef[di];
     var zp=tsNaDan(sd, dfn.poc), gap=Math.round((sd-zp)/60000);
@@ -1721,11 +1742,14 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="m-zavrsi"){
+    if(Date.now() < S.smena.kraj_plan - 60000){ sheet="kraj-smene"; render(); return; }
     pitaj(uNalogu(S.smena)
         ? "Nalog je još otvoren — njegove stavke se neće upisati. Prvo ga prekini, ili nastavi ovako."
         : "Zatvoriti smenu i upisati je u mesec?",
-      "Zatvori smenu", zavrsiSmenu); return;
+      "Zatvori smenu", function(){ zavrsiSmenu(false); }); return;
   }
+  if(a==="kraj-do-kraja"){ zavrsiSmenu(true);  return; }
+  if(a==="kraj-do-sada"){  zavrsiSmenu(false); return; }
   if(a==="m-odustani"){
     pitaj("Obrisati smenu koja traje? Neće ući u mesec i ne može da se vrati.", "Obriši smenu",
       function(){ S.smena=null; save(); render(); poruka("Smena obrisana"); });
@@ -1872,7 +1896,8 @@ function tekstDana(){
     + br(o.zone[z].tempo,0)+"/h  norma "+o.zone[z].norma+"  "
     + (o.zone[z].odst!=null?pct(o.zone[z].odst,0):"")+"\n";
   s += "\nPozicije: "+cel(o.ukPoz)+"\nMinuti rada: "+cel(o.ukMin)+"\nČekanje: "+cel(o.cekMin)+" min (odbijeno)\n"
-    +  "Prazan hod: "+cel(o.prazMin)+" min · pauza: "+cel(o.pauMin)+" min (ulaze u normu)\n"
+    +  "Prazan hod: "+cel(o.prazMin)+" min · pauza: "+cel(o.pauMin)+" min"
+    +  (o.spremMin>=0.5 ? " · odlaganje opreme: "+cel(o.spremMin)+" min" : "")+" (ulaze u normu)\n"
     +  "Brzina u nalozima: "+br(o.nalogTempo)+"\n"
     +  "Traženi učinak: "+br(o.trazeni)+"\nRealizovani učinak: "+br(o.ostvareni)+"\n"
     +  "Razlika: "+pct(o.razlika)+"\n";
