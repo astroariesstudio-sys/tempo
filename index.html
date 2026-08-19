@@ -917,11 +917,17 @@ function viewStart(){
 function viewAktivna(){
   var sm=S.smena, sada=Math.min(tren(), sm.kraj_plan), o=obracun(sm,sada), c=cilj(sm,o,sada);
   var isteklaSmena = Date.now() > sm.kraj_plan;
+  var nijePocela   = Date.now() < sm.pocetak;
   var z=trenutnaZona(sm), h="", i;
   var jeCekanje=ceka(sm), jePauza=pauzira(sm);
 
   h += '<div class="stack">';
 
+  if(nijePocela)
+    h += '<div class="goal need" style="padding:12px 14px">'
+      +  '<div class="lbl">Smena još nije počela</div>'
+      +  '<div class="n" style="font-size:26px">'+odbroj((sm.pocetak-Date.now())/60000)+'</div>'
+      +  '<div class="cap">do '+sat(sm.pocetak)+' · sve stoji, brojači kreću tek tada</div></div>';
   if(isteklaSmena)
     h += '<div class="warn"><b>Smena je istekla u '+sat(sm.kraj_plan)+'.</b> '
       +  'Vreme se više ne broji. Zatvori je preko ⋯ → Završi smenu.</div>';
