@@ -915,11 +915,16 @@ function viewStart(){
 
 /* ---- aktivna smena ---- */
 function viewAktivna(){
-  var sm=S.smena, sada=tren(), o=obracun(sm,sada), c=cilj(sm,o,sada);
+  var sm=S.smena, sada=Math.min(tren(), sm.kraj_plan), o=obracun(sm,sada), c=cilj(sm,o,sada);
+  var isteklaSmena = Date.now() > sm.kraj_plan;
   var z=trenutnaZona(sm), h="", i;
   var jeCekanje=ceka(sm), jePauza=pauzira(sm);
 
   h += '<div class="stack">';
+
+  if(isteklaSmena)
+    h += '<div class="warn"><b>Smena je istekla u '+sat(sm.kraj_plan)+'.</b> '
+      +  'Vreme se više ne broji. Zatvori je preko ⋯ → Završi smenu.</div>';
 
   if(jeCekanje){
     var od=odKada(sm,"cekanje","nastavak");
