@@ -584,13 +584,22 @@ function obracun(sm, sada){
           nalogTempo: (meri && nalogMin>=1) ? ukPoz/nalogMin*60 : null, tl:t};
 }
 
+/* Trenutak koji se upisuje u smenu. Nikad pre zvaničnog početka — inače bi
+   dogadjaj pao pre prvog zonskog odsečka i ostao bez zone i bez norme. */
+function tren(){
+  var t=Date.now();
+  return (S.smena && S.smena.pocetak && t < S.smena.pocetak) ? S.smena.pocetak : t;
+}
+
 /* zona koja je važila u datom trenutku */
 function trenutnaZonaDo(sm, t){
-  var z=null;
-  for(var i=0;i<sm.dogadjaji.length;i++){
-    if(sm.dogadjaji[i].tip==="zona" && sm.dogadjaji[i].t<=t) z=sm.dogadjaji[i].zona;
+  var z=null, prva=null, i;
+  for(i=0;i<sm.dogadjaji.length;i++){
+    if(sm.dogadjaji[i].tip!=="zona") continue;
+    if(prva===null) prva=sm.dogadjaji[i].zona;
+    if(sm.dogadjaji[i].t<=t) z=sm.dogadjaji[i].zona;
   }
-  return z;
+  return z!==null ? z : prva;   /* pre prve promene zone važi prva */
 }
 /* oznaka pozicije: 8 cifara → 240-190-02, ispisuje se i dok je nedovršena */
 function kodTekst(cifre){
@@ -646,7 +655,7 @@ function cilj(sm, o, sada){
    ========================================================================= */
 function dogadjaj(tip, extra){
   if(!S.smena) return;
-  var e = {tip:tip, t:Date.now()};
+  var e = {tip:tip, t:tren()};
   if(extra) for(var k in extra) e[k]=extra[k];
   S.smena.dogadjaji.push(e); save(); render();
 }
@@ -678,7 +687,7 @@ function promeniZonu(z){
   if(trenutnaZona(sm)===z) return;
   var zad = sm.dogadjaji[sm.dogadjaji.length-1];
   if(zad && zad.tip==="zona" && Date.now()-zad.t < 45000){ zad.zona=z; }   // ispravka pogrešnog dodira
-  else sm.dogadjaji.push({tip:"zona",zona:z,t:Date.now()});
+  else sm.dogadjaji.push({tip:"zona",zona:z,t:tren()});
   save(); render(); poruka("Zona "+z);
 }
 /* nalog se OTVARA brojem stavki — tada se zna koliko ima, i tada kreće njegovo vreme */
@@ -689,7 +698,7 @@ function otvoriUnosStavki(kada){
 }
 function pocniNalog(poz, kada){
   var sm=S.smena; if(!sm || uNalogu(sm) || !poz) return;
-  sm.dogadjaji.push({tip:"nalog_poc", t:(kada||Date.now()), poz:poz, id:"p"+Date.now()});
+  sm.dogadjaji.push({tip:"nalog_poc", t:(kada||tren()), poz:poz, id:"p"+Date.now()});
   save(); render(); poruka("Nalog "+poz+" stavki — vreme teče");
 }
 /* ispravka broja stavki na otvorenom nalogu */
@@ -715,7 +724,7 @@ function prekiniNalog(uradjeno){
   }
   otvoren.poz = uradjeno;
   otvoren.prekinut = true;
-  var t=Date.now();
+  var t=tren();
   sm.dogadjaji.push({tip:"nalog", t:t, zona:trenutnaZona(sm), poz:uradjeno, id:t+"_"+uradjeno});
   save(); sheet="rezultat"; render();
 }
@@ -725,7 +734,7 @@ function zavrsiNalog(){
   for(i=sm.dogadjaji.length-1;i>=0;i--)
     if(sm.dogadjaji[i].tip==="nalog_poc"){ otvoren=sm.dogadjaji[i]; break; }
   if(!otvoren || !otvoren.poz){ otvoriUnosStavki(); poruka("Prvo upiši koliko stavki ima"); return; }
-  var t=Date.now();
+  var t=tren();
   sm.dogadjaji.push({tip:"nalog", t:t, zona:trenutnaZona(sm), poz:otvoren.poz, id:t+"_"+otvoren.poz});
   save(); sheet="rezultat"; render();
 }
@@ -733,7 +742,7 @@ function zavrsiNalog(){
 function pocniCekanje(){
   var sm=S.smena; if(!sm || ceka(sm)) return;
   var id = "c"+Date.now();
-  sm.dogadjaji.push({tip:"cekanje", t:Date.now(), kod:"", id:id});
+  sm.dogadjaji.push({tip:"cekanje", t:tren(), kod:"", id:id});
   save();
   keypad = {rezim:"kod", v:"", id:id};
   render();
@@ -906,7 +915,7 @@ function viewStart(){
 
 /* ---- aktivna smena ---- */
 function viewAktivna(){
-  var sm=S.smena, sada=Date.now(), o=obracun(sm,sada), c=cilj(sm,o,sada);
+  var sm=S.smena, sada=tren(), o=obracun(sm,sada), c=cilj(sm,o,sada);
   var z=trenutnaZona(sm), h="", i;
   var jeCekanje=ceka(sm), jePauza=pauzira(sm);
 
