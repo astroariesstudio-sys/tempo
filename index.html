@@ -241,6 +241,48 @@ var KEY = "tempo_smene_v1";
 var DEF_NORME = {F1:117,F2:117,F3:54,F6:81,F7:106,FT:76,FM:35,FS:135,KD:280};
 var DEF_AKTIVNE = ["F6","F7","FT"];
 
+/* -------------------------------------------------------------------------
+   PALLY SISTEM — spisak filijala sa lista u magacinu.
+   Zastavice: 1 = sve u kašete (plavo polje)   2 = 4 u visinu (crveni tekst)
+   Filijala koje NEMA na spisku ide na EP. J040 je izuzetak — paleta, 4 u visinu.
+   Sve se može ispraviti u kartici Norme, jer je spisak prepisan sa fotografije.
+   ------------------------------------------------------------------------- */
+var SPISAK = [
+ "J003","J00A","J00C","J00E","J00F","J00G","J00I","J00J","J00M",
+ "J015","J016","J017","J018","J01B","J01C","J01D","J01E","J01H","J01K","J01L","J01N",
+ "J021","J023","J024","J025","J027","J02B","J02D","J02J","J02K","J02L","J02M","J02N",
+ "J030","J034","J036","J037","J039","J03B","J03C","J03D","J03G","J03H","J03J","J03L","J03M",
+ "J045","J047","J048","J049","J04C","J04D","J04E","J04F","J04G","J04I","J04K","J04L","J04N",
+ "J050","J051","J052","J053","J054","J055","J056","J057","J058","J05A","J05B","J05D","J05G","J05H","J05J","J05M","J05N",
+ "J060","J061","J062","J063","J064","J066","J06B","J06D","J06I","J06K",
+ "J071","J073","J074","J075","J077","J078","J07C","J07E","J07G"
+];
+/* prvo čitanje sa slike — PROVERI pre nego što se osloniš */
+var DEF_FILIJALE = {
+ "J00A":1,"J00F":2,"J01B":3,"J02J":1,"J036":3,"J037":1,
+ "J047":1,"J04D":1,"J04E":1,"J04F":1,"J04G":1,"J04I":1,
+ "J05B":1,"J05D":1,"J05G":1,"J05H":1,"J05J":1,
+ "J06I":1,"J06K":1,
+ "J071":1,"J073":1,"J074":1,"J075":1,"J077":1,"J078":1,"J07C":1,"J07E":1,"J07G":1
+};
+function grupeFilijala(){
+  var g=[], i, k;
+  for(i=0;i<SPISAK.length;i++){ k=SPISAK[i].slice(0,3); if(g.indexOf(k)<0) g.push(k); }
+  return g;
+}
+/* presuda o pakovanju za jednu filijalu */
+function pakovanje(kod){
+  if(!kod) return null;
+  kod = String(kod).toUpperCase();
+  if(kod==="J040") return {kod:kod, glavno:"PALETA", dodatak:"4 u visinu", vrsta:"paleta"};
+  var f = S.filijale ? S.filijale[kod] : undefined;
+  if(f===undefined) return {kod:kod, glavno:"EP — EUROPALETA", dodatak:"", vrsta:"ep"};
+  return {kod:kod,
+          glavno:(f & 1) ? "PALLY — SVE U KAŠETE" : "PALLY",
+          dodatak:(f & 2) ? "4 u visinu" : "",
+          vrsta:(f & 1) ? "kasete" : "pally"};
+}
+
 var DEF_SMENE = [{ime:"Prva", poc:"06:00", kraj:"14:00"},
                  {ime:"Druga", poc:"14:00", kraj:"22:00"}];
 
@@ -250,6 +292,7 @@ var S = {
   smeneDef: DEF_SMENE.map(function(x){ return Object.assign({},x); }),
   pragPrazan: 5,          // minuta praznog hoda posle kojih ekran upozorava
   pauzaFond: 60,          // minuta pauze po smeni, može iz više delova
+  filijale: null,         // spisak Pally sistema, ispravljiv u Normama
   tema: null,
   smena: null,            // {datum,pocetak,kraj_plan,kraj,dogadjaji:[]}
   dani: [],               // zavrsene smene
@@ -257,7 +300,8 @@ var S = {
 };
 var tab = "smena", sheet = null, keypad = null, saveErr = false,
     mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
-    pitanje = null, tekstZaPrikaz = null, vremenaZa = null;
+    pitanje = null, tekstZaPrikaz = null, vremenaZa = null,
+    filGrupa = null, filijalaZaNalog = null;
 
 /* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
    pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
@@ -334,11 +378,15 @@ function aktivanMesec(){
   return mesecIzbor;
 }
 
-function citaj(store){
-  try{ return store ? store.getItem(KEY) : null; }catch(e){ return null; }
+/* i sam pristup memoriji ume da pukne (privatni režim), zato je i on unutar zaštite */
+function citaj(vrsta){
+  try{
+    var st = (vrsta==="lokalna") ? window.localStorage : window.sessionStorage;
+    return st ? st.getItem(KEY) : null;
+  }catch(e){ return null; }
 }
 function load(){
-  var raw = citaj(window.localStorage) || citaj(window.sessionStorage);
+  var raw = citaj("lokalna") || citaj("sesija");
   try{
     if(raw){ var d = JSON.parse(raw); for(var k in d) if(d[k]!==undefined) S[k]=d[k]; }
   }catch(e){}
@@ -348,6 +396,8 @@ function load(){
     S.smeneDef = DEF_SMENE.map(function(x){ return Object.assign({},x); });
   if(!Array.isArray(S.dani)) S.dani = [];
   if(!S.greske) S.greske = {};
+  if(!S.filijale){ S.filijale = {}; for(var fk in DEF_FILIJALE) S.filijale[fk]=DEF_FILIJALE[fk];
+                   for(var fi=0;fi<SPISAK.length;fi++) if(S.filijale[SPISAK[fi]]===undefined) S.filijale[SPISAK[fi]]=0; }
   zatvoriZaostalu();
   save();                                  // odmah proveri da li telefon uopšte dozvoljava čuvanje
 }
@@ -369,8 +419,8 @@ function save(){
   var txt;
   try{ txt = JSON.stringify(S); }catch(e){ return; }
   var uspeh = false;
-  try{ window.localStorage.setItem(KEY, txt); uspeh = true; }catch(e){}
-  try{ window.sessionStorage.setItem(KEY, txt); uspeh = true; }catch(e){}
+  try{ if(window.localStorage){ window.localStorage.setItem(KEY, txt); uspeh = true; } }catch(e){}
+  try{ if(window.sessionStorage){ window.sessionStorage.setItem(KEY, txt); uspeh = true; } }catch(e){}
   saveErr = !uspeh;
 }
 
@@ -444,7 +494,7 @@ function razlozi(sm, sada){
     else if(e.tip==="nalog_poc"){
       if(cpr){ cpr.kraj=e.t; cpr=null; }
       uNal=true; cn={poc:e.t, kraj:null, poz:e.poz||0, zona:trenutnaZonaDo(sm,e.t),
-                     id:e.id, prekinut:!!e.prekinut};
+                     id:e.id, prekinut:!!e.prekinut, fil:e.fil||null};
       nal.push(cn);
     }
     else if(e.tip==="nalog"){
@@ -698,7 +748,9 @@ function otvoriUnosStavki(kada){
 }
 function pocniNalog(poz, kada){
   var sm=S.smena; if(!sm || uNalogu(sm) || !poz) return;
-  sm.dogadjaji.push({tip:"nalog_poc", t:(kada||tren()), poz:poz, id:"p"+Date.now()});
+  sm.dogadjaji.push({tip:"nalog_poc", t:(kada||tren()), poz:poz, id:"p"+Date.now(),
+                     fil:(filijalaZaNalog && filijalaZaNalog!=="—") ? filijalaZaNalog : (filijalaZaNalog==="—"?"—":null)});
+  filijalaZaNalog = null;
   save(); render(); poruka("Nalog "+poz+" stavki — vreme teče");
 }
 /* ispravka broja stavki na otvorenom nalogu */
@@ -980,6 +1032,11 @@ function viewAktivna(){
       +  '<div><div class="lbl">Nalog u toku · '
       +    '<button data-act="ispravi-stavke" style="color:var(--accent);font:inherit;text-transform:none;letter-spacing:0">'
       +      nt.poz+' stavki ✎</button></div>'
+      +   (nt.fil ? (function(){ var pv=pakovanje(nt.fil);
+             return '<div class="tiny" style="margin:-2px 0 4px;font-weight:700;color:'
+               + (pv.vrsta==="kasete"?"var(--good)":(pv.vrsta==="ep"?"var(--muted)":"var(--accent)"))+'">'
+               + esc(nt.fil==="—"?"":nt.fil+" · ")+esc(pv.glavno)
+               + (pv.dodatak?" · "+esc(pv.dodatak):"")+'</div>'; })() : '')
       +   (preostaloN!=null
           ? '<div class="num" style="font-size:40px;font-weight:600;line-height:1.02;letter-spacing:-.03em'
             + (kasniN?";color:var(--bad)":";color:var(--good)")+'">'+odbroj(preostaloN)+'</div>'
@@ -1114,6 +1171,7 @@ function nalozeKartica(sm, o, granica){
     var r=lista[i], st=nalogStat(o.tl, r);
     h += '<div class="ord"><span class="t">'+sat(r.poc)+'</span><span class="zn">'+(r.zona||"")+'</span>'
       +  '<span class="p" style="width:52px">'+r.poz+(r.prekinut?'<span class="tiny muted">✂</span>':'')+'</span>'
+      +  '<span class="tiny muted" style="width:52px">'+(r.fil && r.fil!=="—" ? esc(r.fil) : "")+'</span>'
       +  '<span class="tiny muted" style="width:56px">'+cel(st.min)+' min</span>'
       +  '<span class="sp"></span>'
       +  '<span class="num '+kl(st.odst)+'" style="font-weight:600">'+pct(st.odst,0)+'</span>'
@@ -1504,6 +1562,26 @@ function viewNorme(){
     + 'Razlika = ostvareni ÷ traženi − 1.'
     + '</div></div>';
 
+  h += '<div class="card"><div class="lbl">Pally sistem — filijale</div>'
+    +  '<div class="tiny muted" style="margin:4px 0 8px">Prepisano sa spiska u magacinu, '
+    +  '<b>proveri pre nego što se osloniš</b>. Dodir menja stanje redom: '
+    +  'pally → kašete → kašete + 4 u visinu → 4 u visinu → nazad na pally.</div>';
+  var gsve=grupeFilijala(), gg, gj;
+  for(gg=0;gg<gsve.length;gg++){
+    h += '<div class="lbl" style="margin:10px 0 5px">'+gsve[gg]+'</div><div class="row" style="flex-wrap:wrap;gap:5px">';
+    for(gj=0;gj<SPISAK.length;gj++){
+      if(SPISAK[gj].slice(0,3)!==gsve[gg]) continue;
+      var fs=S.filijale[SPISAK[gj]]||0;
+      var st2=(fs&1)?'background:var(--good-soft);border-color:var(--good)':'';
+      var tx=(fs&2)?'color:var(--bad);font-weight:800':'';
+      h += '<button class="chip" style="padding:7px 9px;font-family:var(--font-num);'+st2+';'+tx+'" '
+        +  'data-act="fil-uredi" data-k="'+SPISAK[gj]+'">'+SPISAK[gj]+((fs&2)?" 4u":"")+'</button>';
+    }
+    h += '</div>';
+  }
+  h += '<div class="tiny muted" style="margin-top:10px">Filijala koje nema na spisku ide na EP. '
+    +  'J040 je izuzetak — paleta, 4 u visinu.</div></div>';
+
   h += '<div class="card"><div class="lbl">Podaci</div>'
     + '<div class="tiny muted" style="margin:5px 0 8px">Sve stoji samo u ovom telefonu. Kopiraj tekst ispod na sigurno mesto s vremena na vreme.</div>'
     + '<textarea id="dump">'+esc(JSON.stringify({norme:S.norme,aktivne:S.aktivne,smeneDef:S.smeneDef,dani:S.dani,greske:S.greske}))+'</textarea>'
@@ -1567,6 +1645,7 @@ function ovSheet(){
     var sm=S.smena;
     h += '<div class="menu">'
       + mi("pauza", pauzira(sm)?"⏵":"⏸", pauzira(sm)?"Završi pauzu":"Počni pauzu", "")
+      + mi("ispravi-zonu","⇄","Ispravi zonu — bio sam u drugoj","")
       + (uNalogu(sm) ? mi("prekini","⊘","Prekini nalog — nije dovršen","") : "")
       + mi("ponisti","↶","Poništi poslednji nalog","")
       + mi("vremena","🕗","Ispravi vremena smene","")
@@ -1574,6 +1653,66 @@ function ovSheet(){
       + mi("zavrsi","■","Završi smenu","")
       + mi("odustani","✕","Odustani — obriši ovu smenu","danger")
       + '</div>';
+  } else if(sheet==="filijala"){
+    var grupe=grupeFilijala(), gi;
+    if(!filGrupa || grupe.indexOf(filGrupa)<0) filGrupa=grupe[0];
+    h += '<div class="lbl">Koja je filijala</div>'
+      +  '<div class="tiny muted" style="margin:5px 0 10px">Prvo grupa, pa broj.</div>'
+      +  '<div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+    for(gi=0;gi<grupe.length;gi++)
+      h += '<button class="chip'+(grupe[gi]===filGrupa?" on":"")+'" data-act="fil-grupa" data-g="'+grupe[gi]+'">'
+        +  grupe[gi]+'</button>';
+    h += '</div><div class="zones">';
+    for(gi=0;gi<SPISAK.length;gi++){
+      if(SPISAK[gi].slice(0,3)!==filGrupa) continue;
+      var fz=S.filijale[SPISAK[gi]]||0;
+      h += '<button class="z" style="min-width:80px'+((fz&1)?';background:var(--good-soft);border-color:var(--good)':'')+'" '
+        +  'data-act="fil-kod" data-k="'+SPISAK[gi]+'">'
+        +  '<span class="k">'+SPISAK[gi]+'</span>'
+        +  '<span class="v">'+((fz&1)?"kašete":"pally")+((fz&2)?" · 4u":"")+'</span></button>';
+    }
+    h += '</div>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="J040">J040 — paleta</button>'
+      +  '<button class="btn ghost wide" style="margin-top:8px;min-height:50px" data-act="fil-nema">Nije na spisku — EP</button>'
+      +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-preskoci">Preskoči, bez filijale</button>';
+
+  } else if(sheet==="pakovanje"){
+    var pk=pakovanje(filijalaZaNalog);
+    if(!pk){ h += '<div class="empty">Nema filijale.</div>'; }
+    else {
+      var boja = pk.vrsta==="kasete" ? "var(--good)" : (pk.vrsta==="ep" ? "var(--muted)" : "var(--accent)");
+      h += '<div class="lbl" style="text-align:center">Filijala '+esc(pk.kod)+'</div>'
+        +  '<div style="text-align:center;padding:16px 8px 10px">'
+        +   '<div style="font-size:26px;font-weight:800;letter-spacing:-.01em;line-height:1.15;color:'+boja+'">'
+        +     esc(pk.glavno)+'</div>'
+        +   (pk.dodatak ? '<div style="font-size:19px;font-weight:700;color:var(--bad);margin-top:8px">'
+                        + esc(pk.dodatak).toUpperCase()+'</div>' : '')
+        +  '</div>';
+      if(pk.vrsta!=="ep" && pk.kod!=="J040"){
+        var fv=S.filijale[pk.kod]||0;
+        h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">ako se ne slaže sa spiskom, ispravi ovde</div>'
+          +  '<div class="row" style="gap:8px">'
+          +   '<button class="btn ghost" style="flex:1;min-height:46px'+((fv&1)?';color:var(--good)':'')+'" data-act="fil-kasete">'
+          +     ((fv&1)?"✓ ":"")+'kašete</button>'
+          +   '<button class="btn ghost" style="flex:1;min-height:46px'+((fv&2)?';color:var(--bad)':'')+'" data-act="fil-visina">'
+          +     ((fv&2)?"✓ ":"")+'4 u visinu</button>'
+          +  '</div>';
+      }
+      h += '<button class="btn main wide" style="margin-top:12px;min-height:56px" data-act="fil-dalje">Dalje — upiši stavke</button>'
+        +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-nazad">Nazad na spisak</button>';
+    }
+
+  } else if(sheet==="ispravi-zonu"){
+    h += '<div class="lbl">U kojoj si zoni zapravo</div>'
+      +  '<div class="tiny muted" style="margin:5px 0 10px">Ispravlja zonu unazad, od poslednje promene — '
+      +  'za slučaj da si izabrao pogrešnu pa shvatio usred naloga.</div><div class="zones">';
+    var zl2=S.aktivne.slice(), zt=trenutnaZona(S.smena), zj;
+    if(zt && zl2.indexOf(zt)<0) zl2.push(zt);
+    for(zj=0;zj<zl2.length;zj++)
+      h += '<button class="z'+(zl2[zj]===zt?" on":"")+'" data-act="zona-ispravka" data-z="'+zl2[zj]+'">'
+        +  '<span class="k">'+zl2[zj]+'</span><span class="v">norma '+(S.norme[zl2[zj]]||"—")+'</span></button>';
+    h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
+
   } else if(sheet==="kraj-smene"){
     var ks=S.smena, sd2=Date.now(), ostatak=Math.round((ks.kraj_plan-sd2)/60000);
     h += '<div class="lbl">Kraj smene</div>'
@@ -1712,7 +1851,34 @@ document.addEventListener("click", function(ev){
     if(!uNalogu(S.smena)){ poruka("Nisi u nalogu — dodirni POČNI NALOG"); return; }
     zavrsiNalog(); return;
   }
-  if(a==="pocni-nalog"){ otvoriUnosStavki(); return; }
+  if(a==="pocni-nalog"){ filijalaZaNalog=null; sheet="filijala"; render(); return; }
+  if(a==="fil-grupa"){ filGrupa=el.dataset.g; render(); return; }
+  if(a==="fil-kod"){ filijalaZaNalog=el.dataset.k; sheet="pakovanje"; render(); return; }
+  if(a==="fil-nema"){ filijalaZaNalog="—"; sheet="pakovanje"; render(); return; }
+  if(a==="fil-preskoci"){ filijalaZaNalog=null; sheet=null; otvoriUnosStavki(); return; }
+  if(a==="fil-nazad"){ sheet="filijala"; render(); return; }
+  if(a==="fil-dalje"){ sheet=null; otvoriUnosStavki(); return; }
+  if(a==="fil-kasete" || a==="fil-visina"){
+    var fkod=filijalaZaNalog, bit=(a==="fil-kasete")?1:2;
+    if(fkod && S.filijale[fkod]!==undefined){ S.filijale[fkod] ^= bit; save(); render(); }
+    return;
+  }
+  if(a==="fil-uredi"){
+    var uk=el.dataset.k, sv=S.filijale[uk]||0;
+    S.filijale[uk] = (sv===0)?1:((sv===1)?3:((sv===3)?2:0));
+    save(); render(); return;
+  }
+  if(a==="m-ispravi-zonu"){ sheet="ispravi-zonu"; render(); return; }
+  if(a==="zona-ispravka"){
+    var smz=S.smena, nz=el.dataset.z, zi;
+    if(smz){
+      for(zi=smz.dogadjaji.length-1;zi>=0;zi--)
+        if(smz.dogadjaji[zi].tip==="zona"){ smz.dogadjaji[zi].zona=nz; break; }
+      save();
+    }
+    sheet=null; render(); poruka("Zona ispravljena na "+nz);
+    return;
+  }
   if(a==="sledeci-nalog"){ sheet=null; otvoriUnosStavki(); return; }
   if(a==="stajem"){ sheet=null; render(); poruka("Prazan hod teče"); return; }
   if(a==="ispravi-stavke"){
