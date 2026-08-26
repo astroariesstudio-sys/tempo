@@ -265,9 +265,18 @@ var DEF_FILIJALE = {
  "J06I":1,"J06K":1,
  "J071":1,"J073":1,"J074":1,"J075":1,"J077":1,"J078":1,"J07C":1,"J07E":1,"J07G":1
 };
+/* spisak koji se prikazuje je onaj sačuvan u telefonu — tako dopune ostaju */
+function sveFilijale(){
+  var a=[], k;
+  if(S.filijale){ for(k in S.filijale) a.push(k); }
+  else a = SPISAK.slice();
+  a.sort();
+  return a;
+}
 function grupeFilijala(){
-  var g=[], i, k;
-  for(i=0;i<SPISAK.length;i++){ k=SPISAK[i].slice(0,3); if(g.indexOf(k)<0) g.push(k); }
+  var g=[], a=sveFilijale(), i, k;
+  for(i=0;i<a.length;i++){ k=a[i].slice(0,3); if(g.indexOf(k)<0) g.push(k); }
+  g.sort();
   return g;
 }
 /* presuda o pakovanju za jednu filijalu */
@@ -1566,16 +1575,16 @@ function viewNorme(){
     +  '<div class="tiny muted" style="margin:4px 0 8px">Prepisano sa spiska u magacinu, '
     +  '<b>proveri pre nego što se osloniš</b>. Dodir menja stanje redom: '
     +  'pally → kašete → kašete + 4 u visinu → 4 u visinu → nazad na pally.</div>';
-  var gsve=grupeFilijala(), gg, gj;
+  var gsve=grupeFilijala(), lf2=sveFilijale(), gg, gj;
   for(gg=0;gg<gsve.length;gg++){
     h += '<div class="lbl" style="margin:10px 0 5px">'+gsve[gg]+'</div><div class="row" style="flex-wrap:wrap;gap:5px">';
-    for(gj=0;gj<SPISAK.length;gj++){
-      if(SPISAK[gj].slice(0,3)!==gsve[gg]) continue;
-      var fs=S.filijale[SPISAK[gj]]||0;
+    for(gj=0;gj<lf2.length;gj++){
+      if(lf2[gj].slice(0,3)!==gsve[gg]) continue;
+      var fs=S.filijale[lf2[gj]]||0;
       var st2=(fs&1)?'background:var(--good-soft);border-color:var(--good)':'';
       var tx=(fs&2)?'color:var(--bad);font-weight:800':'';
       h += '<button class="chip" style="padding:7px 9px;font-family:var(--font-num);'+st2+';'+tx+'" '
-        +  'data-act="fil-uredi" data-k="'+SPISAK[gj]+'">'+SPISAK[gj]+((fs&2)?" 4u":"")+'</button>';
+        +  'data-act="fil-uredi" data-k="'+lf2[gj]+'">'+lf2[gj]+((fs&2)?" 4u":"")+'</button>';
     }
     h += '</div>';
   }
@@ -1663,17 +1672,23 @@ function ovSheet(){
       h += '<button class="chip'+(grupe[gi]===filGrupa?" on":"")+'" data-act="fil-grupa" data-g="'+grupe[gi]+'">'
         +  grupe[gi]+'</button>';
     h += '</div><div class="zones">';
-    for(gi=0;gi<SPISAK.length;gi++){
-      if(SPISAK[gi].slice(0,3)!==filGrupa) continue;
-      var fz=S.filijale[SPISAK[gi]]||0;
+    var lf=sveFilijale();
+    for(gi=0;gi<lf.length;gi++){
+      if(lf[gi].slice(0,3)!==filGrupa) continue;
+      var fz=S.filijale[lf[gi]]||0;
       h += '<button class="z" style="min-width:80px'+((fz&1)?';background:var(--good-soft);border-color:var(--good)':'')+'" '
-        +  'data-act="fil-kod" data-k="'+SPISAK[gi]+'">'
-        +  '<span class="k">'+SPISAK[gi]+'</span>'
+        +  'data-act="fil-kod" data-k="'+lf[gi]+'">'
+        +  '<span class="k">'+lf[gi]+'</span>'
         +  '<span class="v">'+((fz&1)?"kašete":"pally")+((fz&2)?" · 4u":"")+'</span></button>';
     }
     h += '</div>'
+      +  '<div class="f" style="margin-top:14px"><label>Ili upiši šifru</label>'
+      +   '<input type="text" id="filUpis" placeholder="J082" maxlength="6" '
+      +   'autocapitalize="characters" autocomplete="off" spellcheck="false" '
+      +   'style="width:104px;text-transform:uppercase"></div>'
+      +  '<button class="btn main wide" style="margin-top:8px;min-height:50px" data-act="fil-proveri">Proveri šifru</button>'
+      +  '<div class="tiny muted" style="margin:6px 2px 0">Šifra koje nema na spisku ide na EP — aplikacija to sama kaže.</div>'
       +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="J040">J040 — paleta</button>'
-      +  '<button class="btn ghost wide" style="margin-top:8px;min-height:50px" data-act="fil-nema">Nije na spisku — EP</button>'
       +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-preskoci">Preskoči, bez filijale</button>';
 
   } else if(sheet==="pakovanje"){
@@ -1688,6 +1703,12 @@ function ovSheet(){
         +   (pk.dodatak ? '<div style="font-size:19px;font-weight:700;color:var(--bad);margin-top:8px">'
                         + esc(pk.dodatak).toUpperCase()+'</div>' : '')
         +  '</div>';
+      if(pk.vrsta==="ep" && pk.kod!=="—"){
+        h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">'
+          +  'Ove šifre nema na spisku. Ako je spisak u međuvremenu dopunjen, dodaj je.</div>'
+          +  '<button class="btn ghost wide" style="min-height:46px" data-act="fil-dodaj">'
+          +  'Dodaj '+esc(pk.kod)+' u spisak</button>';
+      }
       if(pk.vrsta!=="ep" && pk.kod!=="J040"){
         var fv=S.filijale[pk.kod]||0;
         h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">ako se ne slaže sa spiskom, ispravi ovde</div>'
@@ -1855,6 +1876,19 @@ document.addEventListener("click", function(ev){
   if(a==="fil-grupa"){ filGrupa=el.dataset.g; render(); return; }
   if(a==="fil-kod"){ filijalaZaNalog=el.dataset.k; sheet="pakovanje"; render(); return; }
   if(a==="fil-nema"){ filijalaZaNalog="—"; sheet="pakovanje"; render(); return; }
+  if(a==="fil-proveri"){
+    var polje=document.getElementById("filUpis");
+    var kod=(polje?polje.value:"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(!kod){ poruka("Upiši šifru filijale"); return; }
+    filijalaZaNalog=kod; sheet="pakovanje"; render(); return;
+  }
+  if(a==="fil-dodaj"){
+    if(filijalaZaNalog && filijalaZaNalog!=="—"){
+      S.filijale[filijalaZaNalog]=0; save(); render();
+      poruka(filijalaZaNalog+" dodata — pally");
+    }
+    return;
+  }
   if(a==="fil-preskoci"){ filijalaZaNalog=null; sheet=null; otvoriUnosStavki(); return; }
   if(a==="fil-nazad"){ sheet="filijala"; render(); return; }
   if(a==="fil-dalje"){ sheet=null; otvoriUnosStavki(); return; }
