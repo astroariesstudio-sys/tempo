@@ -244,7 +244,7 @@ var DEF_AKTIVNE = ["F6","F7","FT"];
 /* -------------------------------------------------------------------------
    PALLY SISTEM — spisak filijala sa lista u magacinu.
    Zastavice: 1 = sve u kašete (plavo polje)   2 = 4 u visinu (crveni tekst)
-   Filijala koje NEMA na spisku ide na EP. J040 je izuzetak — paleta, 4 u visinu.
+   Filijala koje NEMA na spisku ide na EP. J040 je izuzetak — sa spiska je, ali ide na EP, 4 u visinu.
    Sve se može ispraviti u kartici Norme, jer je spisak prepisan sa fotografije.
    ------------------------------------------------------------------------- */
 var SPISAK = [
@@ -283,7 +283,8 @@ function grupeFilijala(){
 function pakovanje(kod){
   if(!kod) return null;
   kod = String(kod).toUpperCase();
-  if(kod==="J040") return {kod:kod, glavno:"PALETA", dodatak:"4 u visinu", vrsta:"paleta"};
+  /* jedina filijala sa spiska koja NE ide na pally: J040 ide na EP, ali 4 u visinu */
+  if(kod==="J040") return {kod:kod, glavno:"EP — EUROPALETA", dodatak:"4 u visinu", vrsta:"ep"};
   var f = S.filijale ? S.filijale[kod] : undefined;
   if(f===undefined) return {kod:kod, glavno:"EP — EUROPALETA", dodatak:"", vrsta:"ep"};
   return {kod:kod,
@@ -1589,7 +1590,7 @@ function viewNorme(){
     h += '</div>';
   }
   h += '<div class="tiny muted" style="margin-top:10px">Filijala koje nema na spisku ide na EP. '
-    +  'J040 je izuzetak — paleta, 4 u visinu.</div></div>';
+    +  'J040 je izuzetak — jedina sa spiska koja ide na EP, ali 4 u visinu.</div></div>';
 
   h += '<div class="card"><div class="lbl">Podaci</div>'
     + '<div class="tiny muted" style="margin:5px 0 8px">Sve stoji samo u ovom telefonu. Kopiraj tekst ispod na sigurno mesto s vremena na vreme.</div>'
@@ -1688,7 +1689,7 @@ function ovSheet(){
       +   'style="width:104px;text-transform:uppercase"></div>'
       +  '<button class="btn main wide" style="margin-top:8px;min-height:50px" data-act="fil-proveri">Proveri šifru</button>'
       +  '<div class="tiny muted" style="margin:6px 2px 0">Šifra koje nema na spisku ide na EP — aplikacija to sama kaže.</div>'
-      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="J040">J040 — paleta</button>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="J040">J040 — EP, 4 u visinu</button>'
       +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-preskoci">Preskoči, bez filijale</button>';
 
   } else if(sheet==="pakovanje"){
@@ -1703,7 +1704,7 @@ function ovSheet(){
         +   (pk.dodatak ? '<div style="font-size:19px;font-weight:700;color:var(--bad);margin-top:8px">'
                         + esc(pk.dodatak).toUpperCase()+'</div>' : '')
         +  '</div>';
-      if(pk.vrsta==="ep" && pk.kod!=="—"){
+      if(pk.vrsta==="ep" && pk.kod!=="—" && pk.kod!=="J040"){
         h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">'
           +  'Ove šifre nema na spisku. Ako je spisak u međuvremenu dopunjen, dodaj je.</div>'
           +  '<button class="btn ghost wide" style="min-height:46px" data-act="fil-dodaj">'
