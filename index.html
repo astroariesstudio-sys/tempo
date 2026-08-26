@@ -257,12 +257,15 @@ var SPISAK = [
  "J060","J061","J062","J063","J064","J066","J06B","J06D","J06I","J06K",
  "J071","J073","J074","J075","J077","J078","J07C","J07E","J07G"
 ];
-/* prvo čitanje sa slike — PROVERI pre nego što se osloniš */
+/* Potvrđeno sa Danielom 19.08.2026:
+   plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
+   J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
+var FILIJALE_VERZIJA = 2;
 var DEF_FILIJALE = {
  "J00A":1,"J00F":2,"J01B":3,"J02J":1,"J036":3,"J037":1,
- "J047":1,"J04D":1,"J04E":1,"J04F":1,"J04G":1,"J04I":1,
- "J05B":1,"J05D":1,"J05G":1,"J05H":1,"J05J":1,
- "J06I":1,"J06K":1,
+ "J047":1,"J04D":1,"J04E":1,"J04F":1,"J04I":1,
+ "J05B":1,
+ "J06I":1,
  "J071":1,"J073":1,"J074":1,"J075":1,"J077":1,"J078":1,"J07C":1,"J07E":1,"J07G":1
 };
 /* spisak koji se prikazuje je onaj sačuvan u telefonu — tako dopune ostaju */
@@ -406,8 +409,15 @@ function load(){
     S.smeneDef = DEF_SMENE.map(function(x){ return Object.assign({},x); });
   if(!Array.isArray(S.dani)) S.dani = [];
   if(!S.greske) S.greske = {};
-  if(!S.filijale){ S.filijale = {}; for(var fk in DEF_FILIJALE) S.filijale[fk]=DEF_FILIJALE[fk];
-                   for(var fi=0;fi<SPISAK.length;fi++) if(S.filijale[SPISAK[fi]]===undefined) S.filijale[SPISAK[fi]]=0; }
+  /* spisak se osvežava kad ga Daniel ispravi — šifre koje je sam dodao ostaju */
+  if(!S.filijale || S.filijaleV !== FILIJALE_VERZIJA){
+    var stare = S.filijale || {}, nova = {}, fk, fi;
+    for(fi=0;fi<SPISAK.length;fi++) nova[SPISAK[fi]] = 0;
+    for(fk in DEF_FILIJALE) nova[fk] = DEF_FILIJALE[fk];
+    for(fk in stare) if(nova[fk]===undefined) nova[fk] = stare[fk];   // ručno dodate
+    S.filijale = nova;
+    S.filijaleV = FILIJALE_VERZIJA;
+  }
   zatvoriZaostalu();
   save();                                  // odmah proveri da li telefon uopšte dozvoljava čuvanje
 }
