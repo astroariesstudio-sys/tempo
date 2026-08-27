@@ -240,6 +240,9 @@ h2.sec{font-size:13px;font-weight:700;margin:2px 0 0;letter-spacing:.01em}
 var KEY = "tempo_smene_v1";
 var DEF_NORME = {F1:117,F2:117,F3:54,F6:81,F7:106,FT:76,FM:35,FS:135,KD:280};
 var DEF_AKTIVNE = ["F6","F7","FT"];
+/* imena robe po zonama — da se na ekranu vidi šta se bere, ne samo šifra */
+var IMENA_ZONA = { "F6":"Hemija", "F7":"Hrana", "FT":"Kućni ljubimci" };
+function imeZone(z){ return IMENA_ZONA[z] || ""; }
 
 /* -------------------------------------------------------------------------
    PALLY SISTEM — spisak filijala sa lista u magacinu.
@@ -987,7 +990,9 @@ function viewStart(){
   var zl = S.aktivne.slice(); if(zl.indexOf(zonaIzbor)<0) zl.push(zonaIzbor);
   for(i=0;i<zl.length;i++)
     h += '<button class="z'+(zl[i]===zonaIzbor?" on":"")+'" data-act="izbor-zone" data-z="'+zl[i]+'">'
-      +  '<span class="k">'+zl[i]+'</span><span class="v">norma '+(S.norme[zl[i]]||"—")+'</span></button>';
+      +  '<span class="k">'+zl[i]+'</span>'
+      +  (imeZone(zl[i]) ? '<span class="v" style="opacity:.8">'+imeZone(zl[i])+'</span>' : '')
+      +  '<span class="v">norma '+(S.norme[zl[i]]||"—")+'</span></button>';
   h += '<button class="zmore" data-act="sve-zone-start">+ zona</button></div>'
     +  '</div>';
 
@@ -1157,7 +1162,7 @@ function viewAktivna(){
   var dzT = dz ? (dz.tempoProj!=null?dz.tempoProj:dz.tempo) : null;
   var dzO = dz ? (dz.odstProj!=null?dz.odstProj:dz.odst) : null;
   h += '<div class="card"><div class="mini">'
-    +  minicol("U zoni "+(z||""), dzT!=null ? br(dzT,0)+" poz/h" : "—",
+    +  minicol("U zoni "+(z||"")+(imeZone(z)?" · "+imeZone(z):""), dzT!=null ? br(dzT,0)+" poz/h" : "—",
               dzO!=null ? pct(dzO,0)+" od norme" : "norma "+(S.norme[z]||"—"))
     +  minicol("Brzina u nalozima", o.nalogTempo!=null ? br(o.nalogTempo,0)+" poz/h" : "—",
               "bez praznog hoda i pauze")
@@ -1303,7 +1308,9 @@ function zoneDugmad(o){
       sub = '<span class="v '+kl(dd)+'">'+br(dt,0)+' · '+pct(dd,0)+'</span>';
     } else sub = '<span class="v">norma '+(S.norme[k]||"—")+'</span>';
     h += '<button class="z'+(k===z?" on":"")+'" data-act="zona" data-z="'+k+'">'
-      +  '<span class="k">'+k+'</span>'+sub+'</button>';
+      +  '<span class="k">'+k+'</span>'
+      +  (imeZone(k) ? '<span class="v" style="opacity:.8">'+imeZone(k)+'</span>' : '')
+      +  sub+'</button>';
   }
   h += '<button class="zmore" data-act="sve-zone">+ zona</button>';
   return h;
@@ -1596,7 +1603,7 @@ function viewNorme(){
   var z;
   for(z in S.norme){
     h += '<div class="f"><input type="checkbox" data-act="akt" data-z="'+z+'"'+(S.aktivne.indexOf(z)>=0?" checked":"")+'>'
-      +  '<label>'+z+'</label>'
+      +  '<label>'+z+(imeZone(z)?' <span class="tiny muted">'+imeZone(z)+'</span>':'')+'</label>'
       +  '<input type="number" inputmode="numeric" data-act="norma" data-z="'+z+'" value="'+(S.norme[z])+'"></div>';
   }
   h += '</div>';
@@ -1772,7 +1779,9 @@ function ovSheet(){
     if(zt && zl2.indexOf(zt)<0) zl2.push(zt);
     for(zj=0;zj<zl2.length;zj++)
       h += '<button class="z'+(zl2[zj]===zt?" on":"")+'" data-act="zona-ispravka" data-z="'+zl2[zj]+'">'
-        +  '<span class="k">'+zl2[zj]+'</span><span class="v">norma '+(S.norme[zl2[zj]]||"—")+'</span></button>';
+        +  '<span class="k">'+zl2[zj]+'</span>'
+        +  (imeZone(zl2[zj]) ? '<span class="v" style="opacity:.8">'+imeZone(zl2[zj])+'</span>' : '')
+        +  '<span class="v">norma '+(S.norme[zl2[zj]]||"—")+'</span></button>';
     h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
 
   } else if(sheet==="kraj-smene"){
@@ -1848,7 +1857,9 @@ function ovSheet(){
   } else if(sheet==="sve-zone"){
     h += '<div class="lbl" style="margin-bottom:10px">Sve zone</div><div class="zones">';
     for(var z in S.norme)
-      h += '<button class="z" data-act="zona" data-z="'+z+'"><span class="k">'+z+'</span><span class="v">norma '+S.norme[z]+'</span></button>';
+      h += '<button class="z" data-act="zona" data-z="'+z+'"><span class="k">'+z+'</span>'
+        +  (imeZone(z) ? '<span class="v" style="opacity:.8">'+imeZone(z)+'</span>' : '')
+        +  '<span class="v">norma '+S.norme[z]+'</span></button>';
     h += '</div>';
   } else if(sheet==="vremena"){
     var sm2 = smenaPoPocetku(vremenaZa) || S.smena;
