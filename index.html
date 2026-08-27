@@ -1637,7 +1637,9 @@ function viewNorme(){
     + '<button class="btn ghost" style="flex:1;min-height:46px" data-act="vrati">Vrati iz polja</button></div>'
     + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati.</div></div>';
 
-  h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve podatke</button>';
+  h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve smene</button>'
+    +  '<div class="tiny muted" style="margin-top:6px;text-align:center">Briše evidenciju rada sa ovog telefona. '
+    +  'Norme, zone, smene i spisak filijala ostaju.</div>';
   h += '</div>';
   return h;
 }
@@ -2072,9 +2074,13 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="brisi-sve"){
-    pitaj("Trajno brišeš sve smene i podešavanja. Ovo se ne može vratiti.", "Obriši sve", function(){
-      S.dani=[]; S.smena=null; S.greske={}; save(); render(); poruka("Sve obrisano");
-    });
+    var brSm = S.dani.length + (S.smena?1:0);
+    pitaj("Brišeš "+brSm+(brSm===1?" smenu":" smena")+" i evidenciju grešaka, samo sa ovog telefona. "
+        + "Norme, zone i spisak filijala ostaju. Ne može da se vrati — ako ti treba, prvo dodirni Kopiraj sve.",
+      "Obriši "+brSm+(brSm===1?" smenu":" smena"), function(){
+        S.dani=[]; S.smena=null; S.greske={}; danIzbor=null; mesecIzbor=null;
+        save(); render(); poruka("Evidencija obrisana");
+      });
     return;
   }
 });
