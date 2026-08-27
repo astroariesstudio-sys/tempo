@@ -17,21 +17,21 @@
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --bg:#F1F0EC; --surface:#FFFFFF; --surface2:#E8E7E1; --line:#D9D6CD;
-    --ink:#171A1E; --muted:#6E6A62; --dim:#8B877E;
-    --accent:#B87400; --accent-ink:#FFFFFF; --accent-soft:#FBEBCE;
-    --good:#0E7A52; --good-soft:#DCF0E5;
-    --bad:#C0341D;  --bad-soft:#FBE2DC;
-    --shadow:0 8px 24px rgba(60,50,30,.12);
+    --bg:#EDEEF0; --surface:#FFFFFF; --surface2:#E2E4E8; --line:#C4C8CE;
+    --ink:#0F1214; --muted:#4A4F55; --dim:#6B7178;
+    --accent:#9A5E00; --accent-ink:#FFFFFF; --accent-soft:#F7E3BE;
+    --good:#0A6440; --good-soft:#D2EDDF;
+    --bad:#A82814;  --bad-soft:#F9D9D2;
+    --shadow:0 8px 24px rgba(20,25,35,.14);
   }
 }
 :root[data-theme="light"]{
-  --bg:#F1F0EC; --surface:#FFFFFF; --surface2:#E8E7E1; --line:#D9D6CD;
-  --ink:#171A1E; --muted:#6E6A62; --dim:#8B877E;
-  --accent:#B87400; --accent-ink:#FFFFFF; --accent-soft:#FBEBCE;
-  --good:#0E7A52; --good-soft:#DCF0E5;
-  --bad:#C0341D;  --bad-soft:#FBE2DC;
-  --shadow:0 8px 24px rgba(60,50,30,.12);
+  --bg:#EDEEF0; --surface:#FFFFFF; --surface2:#E2E4E8; --line:#C4C8CE;
+  --ink:#0F1214; --muted:#4A4F55; --dim:#6B7178;
+  --accent:#9A5E00; --accent-ink:#FFFFFF; --accent-soft:#F7E3BE;
+  --good:#0A6440; --good-soft:#D2EDDF;
+  --bad:#A82814;  --bad-soft:#F9D9D2;
+  --shadow:0 8px 24px rgba(20,25,35,.14);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -70,13 +70,13 @@ input{font:inherit;color:inherit}
 /* ============ BUILDING BLOCKS ============ */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .stack{display:flex;flex-direction:column;gap:11px}
-.lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
 .num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .row{display:flex;align-items:center;gap:10px}
 .sp{flex:1}
 .muted{color:var(--muted)}
 .small{font-size:12.5px}
-.tiny{font-size:11.5px}
+.tiny{font-size:12px}
 
 /* HERO — glavni pokazatelj */
 .hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -108,11 +108,11 @@ input{font:inherit;color:inherit}
 .z{padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:var(--surface);
    display:flex;flex-direction:column;gap:1px;min-width:76px}
 .z .k{font-family:var(--font-num);font-weight:700;font-size:15px;letter-spacing:.01em}
-.z .v{font-size:11px;color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.z .v{font-size:11.5px;color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums}
 .z.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.z.on .v{color:color-mix(in srgb,var(--accent-ink) 72%,transparent)}
+.z.on .v{color:var(--accent-ink);opacity:.95}
 .z .v.g{color:var(--good)} .z .v.b{color:var(--bad)}
-.z.on .v.g,.z.on .v.b{color:color-mix(in srgb,var(--accent-ink) 78%,transparent)}
+.z.on .v.g,.z.on .v.b{color:var(--accent-ink);opacity:1}
 .zmore{padding:9px 12px;border-radius:11px;border:1px dashed var(--line);color:var(--muted);font-size:13px}
 
 /* STANJE ČEKANJA */
