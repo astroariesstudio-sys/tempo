@@ -909,11 +909,39 @@ function render(){
   document.getElementById("ov").innerHTML = keypad ? ovKeypad() : (sheet ? ovSheet() : "");
 }
 
+/* Pozdrav na otvaranju — menja se po danu, ne pri svakom dodiru. */
+var POZDRAVI = [
+ "DM zna svoj račun. Od danas i ti znaš svoj.",
+ "Još jedna smena u DM-u. Sat kreće tek kad ti kažeš.",
+ "DM meri tebe. Hajde da danas i ti meriš DM.",
+ "U DM-u norma ne pregovara — ali sada bar vidiš gde stojiš.",
+ "Kroz DM dnevno prođe more kutija. Dobar deo je tvoj.",
+ "DM traži normu, ti drži tempo. Vidimo se na kraju smene.",
+ "Nova smena u DM-u, a ti si jedini koji brojke vidi uživo.",
+ "Svaka pozicija u DM-u ima svoje vreme. Danas ga ti držiš.",
+ "U DM-u se ne pamti ko je bio brz, nego ko je bio tačan.",
+ "DM broji pozicije, ne trud. Zato ih brojimo i mi.",
+ "Prazan hod je jedini pravi protivnik u DM magacinu.",
+ "DM ima svoj spisak. Ti od danas imaš svoj."
+];
+function pozdrav(){
+  var d=new Date(), h=d.getHours();
+  var doba = h<11 ? "Dobro jutro" : (h<18 ? "Dobar dan" : "Dobro veče");
+  var dan = Math.floor(d.getTime()/86400000 + d.getDate());
+  var t = POZDRAVI[((dan % POZDRAVI.length) + POZDRAVI.length) % POZDRAVI.length];
+  t = esc(t).replace(/DM/g, '<b style="color:var(--accent)">DM</b>');
+  return '<div class="card" style="padding:12px 14px">'
+       + '<div style="font-size:16px;font-weight:700;margin-bottom:2px">'+doba+'</div>'
+       + '<div class="small muted" style="line-height:1.4">'+t+'</div></div>';
+}
+
 /* ---- start smene ---- */
 function viewStart(){
   var h="", i;
 
   h += '<div class="stack">';
+
+  h += pozdrav();
 
   /* smena koja je ostala otvorena pa je sama zatvorena — traži potvrdu da nije greška */
   var zao = null;
