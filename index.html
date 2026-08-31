@@ -1208,13 +1208,37 @@ function cekanjaKartica(sm, o, moze){
   return h;
 }
 
+/* Nalozi razvrstani po veličini — koliko ti koja veličina donosi ili odnosi.
+   Saldo je: minuti koje norma daje za te stavke minus minuti koje si stvarno brao
+   (bez pauze, jer se ona broji posebno). Ne traži nijedan dodatni unos. */
+var KANTE = [{gr:30,ime:"do 30"},{gr:70,ime:"31–70"},{gr:120,ime:"71–120"},{gr:1e9,ime:"preko 120"}];
+function naloziPoVelicini(smene){
+  var k = KANTE.map(function(x){ return {gr:x.gr, ime:x.ime, broj:0, saldo:0, poz:0}; });
+  smene.forEach(function(sm){
+    var o = obracun(sm, sm.kraj || Date.now()), i, j;
+    for(i=0;i<o.tl.nal.length;i++){
+      var nn = o.tl.nal[i];
+      if(!nn.krajId || !nn.poz) continue;
+      var st = nalogStat(o.tl, nn);
+      if(st.normaMin==null) continue;
+      for(j=0;j<k.length;j++) if(nn.poz <= k[j].gr){
+        k[j].broj++; k[j].saldo += st.normaMin - st.bezPauze; k[j].poz += nn.poz; break;
+      }
+    }
+  });
+  return k;
+}
+
 /* nalozi sa svojim vremenom i uspešnošću */
 function nalozeKartica(sm, o, granica){
   var lista=[], i, h;
   for(i=0;i<o.tl.nal.length;i++)
     if(o.tl.nal[i].krajId) lista.push(o.tl.nal[i]);      // samo završeni
+  var zbirPoz=0;
+  for(i=0;i<lista.length;i++) zbirPoz += lista[i].poz;
   h = '<div class="card"><div class="row" style="margin-bottom:4px"><div class="lbl">Nalozi</div>'
-    + '<div class="sp"></div><div class="tiny muted">'+lista.length+'</div></div>';
+    + '<div class="sp"></div><div class="tiny muted">'+lista.length
+    + (lista.length ? ' · prosečno '+cel(zbirPoz/lista.length)+' pozicija' : '')+'</div></div>';
   if(!lista.length){
     h += '<div class="empty">Još nijedan završen nalog.</div></div>';
     return h;
@@ -1556,6 +1580,30 @@ function viewMesec(){
     if(kljuceviPoz.length>10) h += '<div class="tiny muted" style="padding-top:8px">Prikazano deset najskupljih od '+kljuceviPoz.length+'.</div>';
   }
   h += '</div>';
+
+  /* koja veličina naloga ti se isplati */
+  var kante = naloziPoVelicini(dani.map(function(x){ return x.sm; }));
+  var imaNaloga = false;
+  for(i=0;i<kante.length;i++) if(kante[i].broj) imaNaloga = true;
+  if(imaNaloga){
+    h += '<div class="card"><div class="lbl">Nalozi po veličini</div>'
+      +  '<div class="tiny muted" style="margin:4px 0 6px">Koliko ti koja veličina donosi. '
+      +  'Saldo je vreme koje norma daje minus vreme koje si stvarno brao.</div>'
+      +  '<div class="scroll"><table><thead><tr><th>Naloga</th><th>Broj</th><th>Prosečno</th><th>Saldo po nalogu</th></tr></thead><tbody>';
+    for(i=0;i<kante.length;i++){
+      var kk=kante[i]; if(!kk.broj) continue;
+      var pros = kk.saldo/kk.broj;
+      h += '<tr><td>'+kk.ime+'</td><td>'+kk.broj+'</td><td>'+cel(kk.poz/kk.broj)+' poz</td>'
+        +  '<td class="'+kl(pros)+'">'+(pros>=0?"+":"")+cel(pros)+' min</td></tr>';
+    }
+    h += '</tbody></table></div>';
+    /* gde je prag — prva kanta odozdo koja je u plusu */
+    var prag=null;
+    for(i=0;i<kante.length;i++) if(kante[i].broj && kante[i].saldo/kante[i].broj > 0){ prag=kante[i]; break; }
+    if(prag) h += '<div class="tiny muted" style="padding-top:8px">Tvoj prag: nalozi <b>'+prag.ime
+                + '</b> pozicija prvi su koji ti vraćaju vreme. Sve ispod toga radiš u minusu.</div>';
+    h += '</div>';
+  }
 
   var g = S.greske[mk] || {kontrolisane:"",greske:""};
   var proc = (g.kontrolisane>0) ? (g.greske/g.kontrolisane*100) : null;
