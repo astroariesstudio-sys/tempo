@@ -1215,6 +1215,7 @@ var KANTE = [{gr:30,ime:"do 30"},{gr:70,ime:"31–70"},{gr:120,ime:"71–120"},{
 function naloziPoVelicini(smene){
   var k = KANTE.map(function(x){ return {gr:x.gr, ime:x.ime, broj:0, saldo:0, poz:0}; });
   smene.forEach(function(sm){
+    if(sm.rucno) return;          /* ručno upisan dan nema prave naloge, samo dnevni zbir */
     var o = obracun(sm, sm.kraj || Date.now()), i, j;
     for(i=0;i<o.tl.nal.length;i++){
       var nn = o.tl.nal[i];
@@ -1602,6 +1603,10 @@ function viewMesec(){
     for(i=0;i<kante.length;i++) if(kante[i].broj && kante[i].saldo/kante[i].broj > 0){ prag=kante[i]; break; }
     if(prag) h += '<div class="tiny muted" style="padding-top:8px">Tvoj prag: nalozi <b>'+prag.ime
                 + '</b> pozicija prvi su koji ti vraćaju vreme. Sve ispod toga radiš u minusu.</div>';
+    var brRucnih=0;
+    for(i=0;i<dani.length;i++) if(dani[i].sm.rucno) brRucnih++;
+    if(brRucnih) h += '<div class="tiny muted" style="padding-top:6px">Ručno upisanih dana ('+brRucnih
+                    + ') nema u ovoj tabeli — kod njih je ceo dan zaveden kao jedan nalog.</div>';
     h += '</div>';
   }
 
