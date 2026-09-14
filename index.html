@@ -317,7 +317,7 @@ var S = {
 var tab = "smena", sheet = null, keypad = null, saveErr = false,
     mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
     pitanje = null, tekstZaPrikaz = null, vremenaZa = null,
-    filGrupa = null, filijalaZaNalog = null;
+    filGrupa = null, filijalaZaNalog = null, zonaNalogId = null, zonaNalogNazad = null;
 
 /* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
    pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
@@ -803,6 +803,58 @@ function prekiniNalog(uradjeno){
   sm.dogadjaji.push({tip:"nalog", t:t, zona:trenutnaZona(sm), poz:uradjeno, id:t+"_"+uradjeno});
   save(); sheet="rezultat"; render();
 }
+/* Ispravka zone JEDNOG naloga, i posle zatvaranja.
+   Zona naloga se vuče iz vremenske linije, pa se linija prepravlja samo u prozoru
+   tog naloga: nova zona od uzimanja do predaje, a posle predaje se vraća ono što je
+   važilo — susedni nalozi ostaju kakvi su bili. Pozicije prate zonu. */
+function ubaciDogadjaj(sm, ev){
+  var i=0;
+  while(i<sm.dogadjaji.length && sm.dogadjaji[i].t<=ev.t) i++;
+  sm.dogadjaji.splice(i,0,ev);
+}
+function ispraviZonuNaloga(id, nova){
+  var sm=smenaPoUnosu(id); if(!sm || !nova) return false;
+  var iK=-1, iP=-1, i, e;
+  for(i=0;i<sm.dogadjaji.length;i++){
+    e=sm.dogadjaji[i];
+    if(e.id!==id) continue;
+    if(e.tip==="nalog") iK=i; else if(e.tip==="nalog_poc") iP=i;
+  }
+  if(iK>=0){
+    for(i=iK-1;i>=0;i--){
+      if(sm.dogadjaji[i].tip==="nalog") break;
+      if(sm.dogadjaji[i].tip==="nalog_poc"){ iP=i; break; }
+    }
+  }
+  if(iP<0) return false;
+  var poc = sm.dogadjaji[iP].t;
+  var kraj = (iK>=0) ? sm.dogadjaji[iK].t : null;
+  var stara = trenutnaZonaDo(sm, poc);
+  if(stara===nova) return true;
+  var posle = (kraj!=null) ? trenutnaZonaDo(sm, kraj) : null;
+  /* pozicije prate zonu */
+  if(iK>=0) sm.dogadjaji[iK].zona = nova;
+  /* zona od uzimanja naloga */
+  var naPocetku=false;
+  for(i=0;i<sm.dogadjaji.length;i++)
+    if(sm.dogadjaji[i].tip==="zona" && sm.dogadjaji[i].t===poc){ sm.dogadjaji[i].zona=nova; naPocetku=true; }
+  if(!naPocetku) ubaciDogadjaj(sm, {tip:"zona", zona:nova, t:poc});
+  /* posle predaje vrati ono što je važilo, da sledeći nalozi ostanu netaknuti */
+  if(kraj!=null && posle && posle!==nova){
+    var naKraju=false;
+    for(i=0;i<sm.dogadjaji.length;i++)
+      if(sm.dogadjaji[i].tip==="zona" && sm.dogadjaji[i].t===kraj) naKraju=true;
+    if(!naKraju) ubaciDogadjaj(sm, {tip:"zona", zona:posle, t:kraj});
+  }
+  save();
+  return true;
+}
+function otvoreniNalogId(sm){
+  if(!sm || !uNalogu(sm)) return null;
+  for(var i=sm.dogadjaji.length-1;i>=0;i--)
+    if(sm.dogadjaji[i].tip==="nalog_poc") return sm.dogadjaji[i].id;
+  return null;
+}
 function zavrsiNalog(){
   var sm=S.smena, i; if(!sm || !uNalogu(sm)) return;
   var otvoren=null;
@@ -1247,7 +1299,9 @@ function nalozeKartica(sm, o, granica){
   var n = granica ? Math.min(lista.length, granica) : lista.length;
   for(i=lista.length-1; i>=lista.length-n; i--){
     var r=lista[i], st=nalogStat(o.tl, r);
-    h += '<div class="ord"><span class="t">'+sat(r.poc)+'</span><span class="zn">'+(r.zona||"")+'</span>'
+    h += '<div class="ord"><span class="t">'+sat(r.poc)+'</span>'
+      +  '<button class="zn" style="color:var(--accent);text-align:left;padding:0" data-act="nalog-zona" data-id="'+r.krajId+'" '
+      +  'aria-label="Ispravi zonu naloga">'+(r.zona||"—")+'</button>'
       +  '<span class="p" style="width:52px">'+r.poz+(r.prekinut?'<span class="tiny muted">✂</span>':'')+'</span>'
       +  '<span class="tiny muted" style="width:52px">'+(r.fil && r.fil!=="—" ? esc(r.fil) : "")+'</span>'
       +  '<span class="tiny muted" style="width:56px">'+cel(st.min)+' min</span>'
@@ -1826,6 +1880,22 @@ function ovSheet(){
         +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-nazad">Nazad na spisak</button>';
     }
 
+  } else if(sheet==="zona-naloga"){
+    var smn=smenaPoUnosu(zonaNalogId), zn0=null, zj2, zl3=S.aktivne.slice();
+    if(smn){
+      for(zj2=0;zj2<smn.dogadjaji.length;zj2++)
+        if(smn.dogadjaji[zj2].id===zonaNalogId){ zn0=trenutnaZonaDo(smn, smn.dogadjaji[zj2].t); break; }
+    }
+    if(zn0 && zl3.indexOf(zn0)<0) zl3.push(zn0);
+    h += '<div class="lbl">U kojoj zoni je bio ovaj nalog</div>'
+      +  '<div class="tiny muted" style="margin:5px 0 10px">Menja se samo ovaj nalog — od uzimanja do predaje. '
+      +  'Nalozi pre i posle ostaju gde jesu, a pozicije prate zonu.</div><div class="zones">';
+    for(zj2=0;zj2<zl3.length;zj2++)
+      h += '<button class="z'+(zl3[zj2]===zn0?" on":"")+'" data-act="zona-naloga-izbor" data-z="'+zl3[zj2]+'">'
+        +  '<span class="k">'+zl3[zj2]+'</span>'
+        +  (imeZone(zl3[zj2]) ? '<span class="v" style="opacity:.8">'+imeZone(zl3[zj2])+'</span>' : '')
+        +  '<span class="v">norma '+(S.norme[zl3[zj2]]||"—")+'</span></button>';
+    h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zona-naloga-odustani">Odustani</button>';
   } else if(sheet==="ispravi-zonu"){
     h += '<div class="lbl">U kojoj si zoni zapravo</div>'
       +  '<div class="tiny muted" style="margin:5px 0 10px">Ispravlja zonu unazad, od poslednje promene — '
@@ -1903,6 +1973,8 @@ function ovSheet(){
               + cel(st.min)+' min. Da nije nje, nalog bi bio '+pct(st.odstBP)+'.</div>'
             : '')
         +  '<button class="btn main wide" style="min-height:56px" data-act="stajem">U redu</button>'
+        +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="nalog-zona" '
+        +    'data-id="'+n3.krajId+'" data-nazad="rezultat">Pogrešna zona? Ispravi — bio sam u drugoj</button>'
         +  '<div class="tiny muted" style="text-align:center;margin-top:8px">'
         +    'posle ovoga teče prazan hod dok ne uzmeš sledeći nalog</div>';
     } else {
@@ -2009,7 +2081,25 @@ document.addEventListener("click", function(ev){
     S.filijale[uk] = (sv===0)?1:((sv===1)?3:((sv===3)?2:0));
     save(); render(); return;
   }
-  if(a==="m-ispravi-zonu"){ sheet="ispravi-zonu"; render(); return; }
+  if(a==="m-ispravi-zonu"){
+    /* dok nalog traje ispravlja se BAŠ taj nalog, od njegovog uzimanja — ne i prethodni */
+    var oid=otvoreniNalogId(S.smena);
+    if(oid){ zonaNalogId=oid; zonaNalogNazad=null; sheet="zona-naloga"; render(); return; }
+    sheet="ispravi-zonu"; render(); return;
+  }
+  if(a==="nalog-zona"){
+    zonaNalogId=el.dataset.id; zonaNalogNazad=el.dataset.nazad||null;
+    sheet="zona-naloga"; render(); return;
+  }
+  if(a==="zona-naloga-odustani"){
+    sheet = zonaNalogNazad || null; zonaNalogId=null; zonaNalogNazad=null; render(); return;
+  }
+  if(a==="zona-naloga-izbor"){
+    var nz2=el.dataset.z, ok2=ispraviZonuNaloga(zonaNalogId, nz2);
+    sheet = zonaNalogNazad || null; zonaNalogId=null; zonaNalogNazad=null;
+    render(); poruka(ok2 ? "Nalog prebačen u "+nz2+(imeZone(nz2)?" · "+imeZone(nz2):"") : "Nalog nije nađen");
+    return;
+  }
   if(a==="zona-ispravka"){
     var smz=S.smena, nz=el.dataset.z, zi;
     if(smz){
