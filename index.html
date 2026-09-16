@@ -583,6 +583,23 @@ function obracun(sm, sada){
     for(j=0;j<t.cek.length;j++) m -= preklop(s.poc,s.kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
     uzmi(s.zona).min += Math.max(0,m);
   }
+  /* Pauza se ne vezuje za zonu u kojoj je uzeta, nego se na kraju rasporedi na sve zone
+     srazmerno vremenu rada u njima (Daniel, 16.09.2026). Ukupan učinak se ne menja —
+     zbir minuta po zonama ostaje isti; menja se samo slika po zonama. */
+  var pauSvih=0, radSvih=0;
+  for(i=0;i<t.segs.length;i++){
+    s = t.segs[i];
+    for(j=0;j<t.pau.length;j++){
+      m = preklop(s.poc,s.kraj,t.pau[j].poc,t.pau[j].kraj);
+      for(var k=0;k<t.cek.length;k++)
+        m -= preklop(Math.max(s.poc,t.pau[j].poc),Math.min(s.kraj,t.pau[j].kraj),t.cek[k].poc,t.cek[k].kraj);
+      m = Math.max(0,m)/60000;
+      zone[s.zona].min -= m; pauSvih += m;
+    }
+  }
+  for(z in zone){ zone[z].min = Math.max(0, zone[z].min); radSvih += zone[z].min; }
+  if(pauSvih>0 && radSvih>0)
+    for(z in zone) zone[z].min += pauSvih * zone[z].min / radSvih;
   for(i=0;i<sm.dogadjaji.length;i++){
     o = sm.dogadjaji[i];
     if(o.tip==="nalog"){ var z=uzmi(o.zona); z.poz += o.poz; z.naloga++; }
@@ -606,9 +623,11 @@ function obracun(sm, sada){
     m = prazNeto(t, t.praz[i]);   /* bez čekanja, pauze i spremanja koji upadnu unutra */
     prazMin += m;
     /* prazan hod pripada zoni u kojoj se desio — kao i kod njih, svaki minut je nečiji */
+    var bruto = (t.praz[i].kraj - t.praz[i].poc)/60000;
     for(j=0;j<t.segs.length;j++){
       var up = preklop(t.praz[i].poc,t.praz[i].kraj,t.segs[j].poc,t.segs[j].kraj)/60000;
-      if(up>0 && zone[t.segs[j].zona]) zone[t.segs[j].zona].praz += up;
+      /* neto minuti (bez pauze/čekanja/spremanja) srazmerno, da se kolona slaže sa zbirom */
+      if(up>0 && bruto>0 && zone[t.segs[j].zona]) zone[t.segs[j].zona].praz += m * up / bruto;
     }
   }
 
@@ -1444,7 +1463,7 @@ function viewDan(){
     +  '<td>'+br(o.ostvareni)+'</td><td>'+br(o.trazeni)+'</td>'
     +  '<td class="'+kl(o.razlika)+'">'+pct(o.razlika)+'</td></tr>'
     +  '</tbody></table></div>'
-    +  '<div class="tiny muted">Prazan hod je uračunat u vreme zone u kojoj si tada bio i zato joj obara tempo. '
+    +  '<div class="tiny muted">Prazan hod je uračunat u vreme zone u kojoj si tada bio i zato joj obara tempo. Pauza nije vezana za zonu — raspoređena je na sve zone srazmerno vremenu rada u njima. '
     +  'Da ti minuti kod njih završe u nekoj zoni — sigurno je, jer zbir vremena po zonama daje ceo fond minus čekanje. '
     +  'Po kom pravilu biraju zonu kad si na granici, ne znamo; na ukupan tempo to ne utiče.</div>'
     +  '<div class="mini" style="border-top:1px solid var(--line);padding-top:11px">'
