@@ -1751,7 +1751,8 @@ function viewNorme(){
     + '<textarea id="dump">'+esc(JSON.stringify({norme:S.norme,aktivne:S.aktivne,smeneDef:S.smeneDef,dani:S.dani,greske:S.greske}))+'</textarea>'
     + '<div class="row" style="margin-top:8px"><button class="btn ghost" style="flex:1;min-height:46px" data-act="kopiraj-sve">Kopiraj sve</button>'
     + '<button class="btn ghost" style="flex:1;min-height:46px" data-act="vrati">Vrati iz polja</button></div>'
-    + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati.</div></div>';
+    + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati. '
+    + 'Tekst koji počinje sa {"dodaj": samo dodaje te dane, ostalo ne dira.</div></div>';
 
   h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve smene</button>'
     +  '<div class="tiny muted" style="margin-top:6px;text-align:center">Briše evidenciju rada sa ovog telefona. '
@@ -2223,6 +2224,21 @@ document.addEventListener("click", function(ev){
     var t = polje ? polje.value : "";
     if(!t){ poruka("Nalepi podatke u polje iznad"); return; }
     try{ var d=JSON.parse(t);
+      if(d.dodaj && d.dodaj.length){
+        /* dopuna: samo navedeni dani ulaze, isti datum se zameni, ostalo ostaje netaknuto */
+        var nd=0, zd=0, k, m, nadjen;
+        for(k=0;k<d.dodaj.length;k++){
+          if(!d.dodaj[k] || !d.dodaj[k].datum || !d.dodaj[k].dogadjaji) continue;
+          nadjen=false;
+          for(m=0;m<S.dani.length;m++)
+            if(S.dani[m].datum===d.dodaj[k].datum){ S.dani[m]=d.dodaj[k]; nadjen=true; zd++; break; }
+          if(!nadjen){ S.dani.push(d.dodaj[k]); nd++; }
+        }
+        S.dani.sort(function(x,y){ return (x.pocetak||0)-(y.pocetak||0); });
+        danIzbor=null; save(); render();
+        poruka((nd?"Dodato dana: "+nd:"")+(nd&&zd?", ":"")+(zd?"zamenjeno: "+zd:"")+(!nd&&!zd?"Nema dana za dodavanje":""));
+        return;
+      }
       if(d.norme) S.norme=d.norme; if(d.aktivne) S.aktivne=d.aktivne;
       if(d.smeneDef) S.smeneDef=d.smeneDef; if(d.dani) S.dani=d.dani; if(d.greske) S.greske=d.greske;
       save(); render(); poruka("Vraćeno iz kopije");
