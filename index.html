@@ -1327,6 +1327,9 @@ function nalozeKartica(sm, o, granica){
       +  '<span class="sp"></span>'
       +  '<span class="num '+kl(st.odst)+'" style="font-weight:600">'+pct(st.odst,0)+'</span>'
       +  '<button class="x" style="margin-left:8px" data-act="obrisi" data-id="'+r.krajId+'" aria-label="Obriši nalog">✕</button></div>';
+    /* pauza koja je pala u nalog ostaje u njegovom vremenu (kao kod njih), ali se vidi koliko ga je koštala */
+    if(st.pau>=0.5 && st.odstBP!=null)
+      h += '<div class="tiny muted" style="margin:-5px 0 6px 56px">pauza '+cel(st.pau)+' min unutra · bez nje '+pct(st.odstBP,0)+'</div>';
   }
   if(lista.length>n) h += '<div class="tiny muted" style="padding-top:8px">…i još '+(lista.length-n)+' — sve u kartici <b>Dan</b>.</div>';
   h += '</div>';
