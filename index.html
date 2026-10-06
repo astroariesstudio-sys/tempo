@@ -1961,21 +1961,18 @@ function ovSheet(){
           +  '<div class="tiny" style="margin-top:4px">Izaberi pravu sa spiska, ne pakuj po ovome.</div></div>';
 
       h += '<div class="lbl" style="text-align:center">Filijala '+esc(pk.kod)+'</div>'
-        +  '<div style="text-align:center;padding:14px 8px 4px">'
-        +   '<div class="tiny muted" style="letter-spacing:.08em">NOSAČ</div>'
-        +   '<div style="font-size:30px;font-weight:800;letter-spacing:-.01em;line-height:1.1;color:'+boja+'">'
+        +  '<div style="text-align:center;padding:18px 8px 6px">'
+        +   '<div style="font-size:34px;font-weight:800;letter-spacing:-.01em;line-height:1.05;color:'+boja+'">'
         +     esc(pk.nosac)+'</div>'
-        +   (pk.kako
-              ? '<div class="tiny muted" style="letter-spacing:.08em;margin-top:14px">PAKOVANJE</div>'
-                + '<div style="font-size:23px;font-weight:800;line-height:1.15;color:var(--good)">'
-                + esc(pk.kako)+'</div>'
-              : '')
-        +   (pk.visina ? '<div style="font-size:21px;font-weight:800;color:var(--bad);margin-top:12px">'
-                       + '4 U VISINU</div>' : '')
+        +   (pk.kako ? '<div style="font-size:26px;font-weight:800;line-height:1.1;margin-top:6px;'
+                     + 'color:var(--good)">'+esc(pk.kako)+'</div>' : '')
+        +   (pk.visina ? '<div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:6px;'
+                       + 'color:var(--bad)">4 U VISINU</div>' : '')
         +   (pk.obavezan
-              ? '<div style="font-size:17px;font-weight:800;color:var(--bad);margin-top:12px">OBAVEZAN PALLY</div>'
+              ? '<div class="tiny" style="margin-top:12px;color:var(--bad);font-weight:700;'
+                + 'letter-spacing:.06em">OBAVEZAN PALLY</div>'
               : '')
-        +   (pk.napomena ? '<div class="tiny muted" style="margin-top:8px">'+esc(pk.napomena)+'</div>' : '')
+        +   (pk.napomena ? '<div class="tiny muted" style="margin-top:6px">'+esc(pk.napomena)+'</div>' : '')
         +  '</div>';
       if(pk.vrsta==="ep" && pk.kod!=="—" && pk.kod!=="J040"){
         h += '<div class="tiny" style="text-align:center;margin:4px 0 8px;color:var(--bad)">'
