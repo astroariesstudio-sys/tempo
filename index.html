@@ -265,6 +265,8 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
+var VERZIJA_APP = "06.10.2026";   /* pise na dnu kartice Norme — da se vidi
+                                     da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 4;   /* 06.10.2026 — sa spiska su falile J038, J06N, J079, J07B, J07F */
 var DEF_FILIJALE = {
  "J00A":1,"J00F":2,"J01B":3,"J02J":1,"J036":3,"J037":1,
@@ -1821,6 +1823,8 @@ function viewNorme(){
     + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati. '
     + 'Tekst koji počinje sa {"dodaj": samo dodaje te dane, ostalo ne dira.</div></div>';
 
+  h += '<div class="tiny muted" style="text-align:center;margin:14px 0 2px">verzija '+VERZIJA_APP
+    +  ' · spisak filijala: '+Object.keys(S.filijale||{}).length+' šifara</div>';
   h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve smene</button>'
     +  '<div class="tiny muted" style="margin-top:6px;text-align:center">Briše evidenciju rada sa ovog telefona. '
     +  'Norme, zone, smene i spisak filijala ostaju.</div>';
