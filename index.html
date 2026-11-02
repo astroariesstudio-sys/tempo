@@ -163,6 +163,10 @@ th+th,td+td{padding-left:12px}
 .ev{font-size:12px;color:var(--muted);padding:6px 0;border-top:1px dashed var(--line);
     display:flex;gap:9px}
 .ev span{font-family:var(--font-num)}
+button.ev{width:100%;background:none;border:0;border-top:1px dashed var(--line);
+    font:inherit;font-size:12px;color:var(--muted);text-align:left;cursor:pointer;
+    padding:7px 0;align-items:center}
+button.ev:active{background:var(--surface2)}
 
 /* OVERLAY / KEYPAD / SHEET */
 .ov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;
@@ -266,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "02.11.2026";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "02.11.2026b";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -381,7 +385,8 @@ var S = {
 var tab = "smena", sheet = null, keypad = null, saveErr = false,
     mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
     pitanje = null, tekstZaPrikaz = null, vremenaZa = null,
-    filGrupa = null, filijalaZaNalog = null, zonaNalogId = null, zonaNalogNazad = null;
+    filGrupa = null, filijalaZaNalog = null, zonaNalogId = null, zonaNalogNazad = null,
+    redIzbor = null, dodajTip = "nalog", dodajZona = null;
 
 /* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
    pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
@@ -894,6 +899,74 @@ function ubaciDogadjaj(sm, ev){
   var i=0;
   while(i<sm.dogadjaji.length && sm.dogadjaji[i].t<=ev.t) i++;
   sm.dogadjaji.splice(i,0,ev);
+}
+/* ---- rucne ispravke toka dana ---------------------------------------- */
+/* Opis jednog reda, istim recima kojima je ispisan u toku dana. */
+function opisReda(e){
+  if(e.tip==="zona")      return "zona \u2192 "+e.zona;
+  if(e.tip==="cekanje")   return "\u010dekanje po\u010delo"+(e.kod?" \u00b7 pozicija "+kodTekst(e.kod):"");
+  if(e.tip==="nastavak")  return "nastavak rada";
+  if(e.tip==="pauza")     return "pauza";
+  if(e.tip==="kraj_pauze")return "kraj pauze";
+  if(e.tip==="nalog_poc") return "uzet nalog";
+  if(e.tip==="nalog")     return "nalog zavr\u0161en \u00b7 "+e.poz+" pozicija";
+  if(e.tip==="sprema")    return "odlaganje opreme";
+  return null;
+}
+/* Parnjak reda: nalog_poc\u2194nalog, pauza\u2194kraj_pauze, cekanje\u2194nastavak. */
+function parIndeks(sm, i){
+  var e=sm.dogadjaji[i], j;
+  var napred={nalog_poc:"nalog", pauza:"kraj_pauze", cekanje:"nastavak"};
+  var nazad ={nalog:"nalog_poc", kraj_pauze:"pauza", nastavak:"cekanje"};
+  if(napred[e.tip]){
+    for(j=i+1;j<sm.dogadjaji.length;j++){
+      if(sm.dogadjaji[j].tip===e.tip) break;
+      if(sm.dogadjaji[j].tip===napred[e.tip]) return j;
+    }
+    return -1;
+  }
+  if(nazad[e.tip]){
+    for(j=i-1;j>=0;j--){
+      if(sm.dogadjaji[j].tip===e.tip) break;
+      if(sm.dogadjaji[j].tip===nazad[e.tip]) return j;
+    }
+    return -1;
+  }
+  return -1;
+}
+function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"; }
+/* "7:05", "07:05", "0705", "7.05" \u2014 sve isto; uvek na dan te smene. */
+function uVreme(sm, tekst){
+  var t=String(tekst||"").trim().replace(/[.,\s-]/g,":");
+  var m=t.match(/^(\d{1,2}):?(\d{2})$/);
+  if(!m) return null;
+  var h=parseInt(m[1],10), mi=parseInt(m[2],10);
+  if(h>23 || mi>59) return null;
+  var d=new Date(sm.pocetak); d.setHours(h,mi,0,0);
+  var ts=d.getTime();
+  if(ts < sm.pocetak - 12*3600000) ts += 86400000;   /* smena preko pono\u0107i */
+  return ts;
+}
+function uRasponu(sm, ts){
+  return ts!=null && ts>=sm.pocetak && ts<=(sm.kraj||sm.kraj_plan);
+}
+function rasponTekst(sm){ return sat(sm.pocetak)+"\u2013"+sat(sm.kraj||sm.kraj_plan); }
+/* Intervali jednog para, za proveru preklapanja. */
+function intervali(sm, tipPoc){
+  var r=[], i, j;
+  for(i=0;i<sm.dogadjaji.length;i++) if(sm.dogadjaji[i].tip===tipPoc){
+    j=parIndeks(sm,i);
+    r.push({a:sm.dogadjaji[i].t, b:(j>=0?sm.dogadjaji[j].t:(sm.kraj||sm.kraj_plan))});
+  }
+  return r;
+}
+function preklapa(sm, tipPoc, a, b, osimA){
+  var v=intervali(sm,tipPoc), i;
+  for(i=0;i<v.length;i++){
+    if(osimA!=null && v[i].a===osimA) continue;   /* sam sa sobom se ne preklapa */
+    if(a < v[i].b && v[i].a < b) return v[i];
+  }
+  return null;
 }
 function ispraviZonuNaloga(id, nova){
   var sm=smenaPoUnosu(id); if(!sm || !nova) return false;
@@ -1552,22 +1625,23 @@ function viewDan(){
   h += pauzaKartica(sm, o);
   h += cekanjaKartica(sm, o, true);
 
-  /* tok dana */
-  h += '<div class="card"><div class="lbl" style="margin-bottom:6px">Tok dana</div>';
-  var lista = sm.dogadjaji.slice().sort(function(a,b){return a.t-b.t;});
-  for(i=0;i<lista.length;i++){
-    var e=lista[i], txt;
-    if(e.tip==="zona") txt = "zona → "+e.zona;
-    else if(e.tip==="cekanje") txt = "čekanje počelo" + (e.kod ? " · pozicija "+kodTekst(e.kod) : "");
-    else if(e.tip==="nastavak") txt = "nastavak rada";
-    else if(e.tip==="pauza") txt = "pauza";
-    else if(e.tip==="kraj_pauze") txt = "kraj pauze";
-    else if(e.tip==="nalog_poc") txt = "uzet nalog";
-    else if(e.tip==="nalog") txt = "nalog završen · "+e.poz+" pozicija";
-    else continue;
-    h += '<div class="ev"><span>'+sat(e.t)+'</span>'+txt+'</div>';
+  /* tok dana \u2014 svaki red se dodiruje i ispravlja */
+  sm.dogadjaji.sort(function(a,b){return a.t-b.t;});
+  h += '<div class="card"><div class="row" style="margin-bottom:4px"><div class="lbl">Tok dana</div>'
+    +  '<div class="sp"></div><div class="tiny muted">dodirni red da ispravi\u0161</div></div>';
+  for(i=0;i<sm.dogadjaji.length;i++){
+    var e=sm.dogadjaji[i], txt=opisReda(e);
+    if(!txt) continue;
+    h += '<button class="ev" data-act="red" data-p="'+sm.pocetak+'" data-i="'+i+'">'
+      +  '<span>'+sat(e.t)+'</span>'
+      +  '<span style="font-family:var(--font-ui)">'+esc(txt)+'</span>'
+      +  '<span class="sp"></span><span style="opacity:.45">\u270e</span></button>';
   }
-  h += '</div>';
+  h += '<div class="row" style="gap:7px;margin-top:12px">'
+    +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="nalog">+ Nalog</button>'
+    +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="pauza">+ Pauza</button>'
+    +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="cekanje">+ \u010cekanje</button>'
+    +  '</div></div>';
 
   h += nalozeKartica(sm, o, 0);
 
@@ -1992,6 +2066,86 @@ function ovSheet(){
         +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-nazad">Nazad na spisak</button>';
     }
 
+  } else if(sheet==="uredi-red"){
+    var rs = redIzbor ? smenaPoPocetku(redIzbor.p) : null;
+    var r2 = (rs && redIzbor.i>=0) ? rs.dogadjaji[redIzbor.i] : null;
+    if(!r2){ h += '<div class="empty">Red vi\u0161e ne postoji.</div>'
+               +  '<button class="btn ghost wide" style="margin-top:10px;min-height:46px" data-act="red-odustani">Nazad</button>'; }
+    else {
+      var rp = parIndeks(rs, redIzbor.i);
+      var imeP = (r2.tip==="nalog_poc"||r2.tip==="nalog") ? "nalog"
+               : (r2.tip==="pauza"||r2.tip==="kraj_pauze") ? "pauzu"
+               : (r2.tip==="cekanje"||r2.tip==="nastavak") ? "\u010dekanje" : "red";
+      h += '<div class="lbl">Ispravi red</div>'
+        +  '<div style="font-size:18px;font-weight:700;margin:6px 0 2px">'+esc(opisReda(r2))+'</div>'
+        +  '<div class="tiny muted" style="margin-bottom:12px">Smena '+rasponTekst(rs)
+        +    (rp>=0 ? ' \u00b7 drugi kraj u '+sat(rs.dogadjaji[rp].t) : '')+'</div>'
+        +  '<div class="f"><label>Vreme</label><input type="text" id="rVreme" inputmode="numeric" '
+        +   'maxlength="5" value="'+sat(r2.t)+'" style="width:96px"></div>';
+      if(r2.tip==="nalog")
+        h += '<div class="f"><label>Stavki</label><input type="number" id="rPoz" inputmode="numeric" '
+          +   'value="'+(r2.poz||"")+'" style="width:96px"></div>';
+      if(r2.tip==="cekanje")
+        h += '<div class="f"><label>Pozicija</label><input type="text" id="rKod" '
+          +   'value="'+esc(r2.kod||"")+'" placeholder="240-190-02" style="width:150px"></div>';
+      if(r2.tip==="zona"){
+        var zl4=S.aktivne.slice(), zq;
+        if(zl4.indexOf(r2.zona)<0) zl4.push(r2.zona);
+        h += '<div class="lbl" style="margin-top:12px">Zona</div><div class="zones">';
+        for(zq=0;zq<zl4.length;zq++)
+          h += '<button class="z'+(zl4[zq]===r2.zona?" on":"")+'" data-act="red-zona" data-z="'+zl4[zq]+'">'
+            +  '<span class="k">'+zl4[zq]+'</span>'
+            +  (imeZone(zl4[zq]) ? '<span class="v" style="opacity:.8">'+imeZone(zl4[zq])+'</span>' : '')+'</button>';
+        h += '</div>';
+      }
+      if(r2.tip==="nalog_poc" && rp<0)
+        h += '<div class="card" style="border-color:var(--bad);margin-top:14px">'
+          +  '<div style="font-weight:700;color:var(--bad)">Ovaj nalog nije zatvoren</div>'
+          +  '<div class="tiny muted" style="margin:4px 0 8px">Dok stoji otvoren, njegove pozicije se ne ra\u010dunaju, '
+          +  'a minuti do kraja smene se broje.</div>'
+          +  '<div class="f"><label>Stavki</label><input type="number" id="rzPoz" inputmode="numeric" style="width:96px"></div>'
+          +  '<div class="f"><label>Zavr\u0161en u</label><input type="text" id="rzVreme" inputmode="numeric" '
+          +   'maxlength="5" placeholder="20:41" style="width:96px"></div>'
+          +  '<button class="btn main wide" style="margin-top:10px;min-height:48px" data-act="red-zatvori">Zatvori nalog</button></div>';
+      h += '<button class="btn main wide" style="margin-top:14px;min-height:52px" data-act="red-sacuvaj">Sa\u010duvaj</button>'
+        +  '<button class="btn ghost wide" style="margin-top:8px;min-height:46px;color:var(--bad)" data-act="red-obrisi">Obri\u0161i '+imeP+'</button>'
+        +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="red-odustani">Odustani</button>';
+    }
+
+  } else if(sheet==="dodaj-red"){
+    var ds = redIzbor ? smenaPoPocetku(redIzbor.p) : null;
+    if(!ds){ h += '<div class="empty">Nema smene.</div>'; }
+    else {
+      var tipovi=[["nalog","Nalog"],["pauza","Pauza"],["cekanje","\u010cekanje"]], dq;
+      h += '<div class="lbl">Dodaj u tok dana</div>'
+        +  '<div class="tiny muted" style="margin:5px 0 10px">Smena '+rasponTekst(ds)+'. Vreme se upisuje kao 20:43.</div>'
+        +  '<div class="row" style="gap:6px;margin-bottom:14px">';
+      for(dq=0;dq<tipovi.length;dq++)
+        h += '<button class="chip'+(dodajTip===tipovi[dq][0]?" on":"")+'" style="flex:1;text-align:center" '
+          +  'data-act="dodaj-tip" data-t="'+tipovi[dq][0]+'">'+tipovi[dq][1]+'</button>';
+      h += '</div>';
+      if(dodajTip==="nalog"){
+        var zl5=S.aktivne.slice(), zw;
+        if(!dodajZona || zl5.indexOf(dodajZona)<0) dodajZona=zl5[0];
+        h += '<div class="lbl">Zona</div><div class="zones">';
+        for(zw=0;zw<zl5.length;zw++)
+          h += '<button class="z'+(zl5[zw]===dodajZona?" on":"")+'" data-act="dodaj-zona" data-z="'+zl5[zw]+'">'
+            +  '<span class="k">'+zl5[zw]+'</span>'
+            +  (imeZone(zl5[zw]) ? '<span class="v" style="opacity:.8">'+imeZone(zl5[zw])+'</span>' : '')
+            +  '<span class="v">norma '+(S.norme[zl5[zw]]||"\u2014")+'</span></button>';
+        h += '</div>'
+          +  '<div class="f" style="margin-top:12px"><label>Filijala</label><input type="text" id="dFil" maxlength="6" '
+          +   'autocapitalize="characters" autocomplete="off" spellcheck="false" style="width:110px;text-transform:uppercase"></div>'
+          +  '<div class="f"><label>Stavki</label><input type="number" id="dPoz" inputmode="numeric" style="width:96px"></div>';
+      }
+      if(dodajTip==="cekanje")
+        h += '<div class="f"><label>Pozicija</label><input type="text" id="dKod" placeholder="240-190-02" style="width:150px"></div>';
+      h += '<div class="f"><label>Od</label><input type="text" id="dOd" inputmode="numeric" maxlength="5" placeholder="20:43" style="width:96px"></div>'
+        +  '<div class="f"><label>Do</label><input type="text" id="dDo" inputmode="numeric" maxlength="5" placeholder="21:31" style="width:96px"></div>'
+        +  '<button class="btn main wide" style="margin-top:14px;min-height:52px" data-act="dodaj-potvrdi">Dodaj</button>'
+        +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="red-odustani">Odustani</button>';
+    }
+
   } else if(sheet==="zona-naloga"){
     var smn=smenaPoUnosu(zonaNalogId), zn0=null, zj2, zl3=S.aktivne.slice();
     if(smn){
@@ -2202,6 +2356,125 @@ document.addEventListener("click", function(ev){
     if(oid){ zonaNalogId=oid; zonaNalogNazad=null; sheet="zona-naloga"; render(); return; }
     sheet="ispravi-zonu"; render(); return;
   }
+  /* ---- rucne ispravke toka dana ---- */
+  if(a==="red"){
+    redIzbor={p:parseInt(el.dataset.p,10), i:parseInt(el.dataset.i,10)};
+    sheet="uredi-red"; render(); return;
+  }
+  if(a==="red-odustani"){ redIzbor=null; sheet=null; render(); return; }
+  if(a==="red-zona"){
+    var rz=redIzbor?smenaPoPocetku(redIzbor.p):null;
+    if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; save(); render(); }
+    return;
+  }
+  if(a==="red-sacuvaj"){
+    var sm5=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm5) return;
+    var e5=sm5.dogadjaji[redIzbor.i]; if(!e5) return;
+    var pol=document.getElementById("rVreme");
+    var nt=uVreme(sm5, pol?pol.value:"");
+    if(nt==null){ poruka("Vreme se upisuje kao 20:43"); return; }
+    if(!uRasponu(sm5,nt)){ poruka("Vreme mora biti u smeni "+rasponTekst(sm5)); return; }
+    var pi5=parIndeks(sm5, redIzbor.i);
+    if(pi5>=0){
+      var pt5=sm5.dogadjaji[pi5].t;
+      if(pocetakPara(e5.tip) && nt>=pt5){ poruka("Po\u010detak mora biti pre "+sat(pt5)); return; }
+      if(!pocetakPara(e5.tip) && nt<=pt5){ poruka("Kraj mora biti posle "+sat(pt5)); return; }
+    }
+    e5.t=nt;
+    var pz5=document.getElementById("rPoz");
+    if(pz5 && e5.tip==="nalog"){
+      var nv5=Math.max(0, parseInt(pz5.value,10)||0);
+      if(nv5>0){ e5.poz=nv5; if(pi5>=0) sm5.dogadjaji[pi5].poz=nv5; }
+    }
+    var kd5=document.getElementById("rKod");
+    if(kd5 && e5.tip==="cekanje") e5.kod=kd5.value.trim();
+    sm5.dogadjaji.sort(function(x,y){return x.t-y.t;});
+    redIzbor=null; sheet=null; save(); render(); poruka("Ispravljeno");
+    return;
+  }
+  if(a==="red-zatvori"){
+    var sm6=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm6) return;
+    var e6=sm6.dogadjaji[redIzbor.i]; if(!e6) return;
+    var zp6=Math.max(0, parseInt((document.getElementById("rzPoz")||{}).value,10)||0);
+    var zt6=uVreme(sm6, (document.getElementById("rzVreme")||{}).value);
+    if(!zp6){ poruka("Upi\u0161i broj stavki"); return; }
+    if(zt6==null || !uRasponu(sm6,zt6)){ poruka("Vreme mora biti u smeni "+rasponTekst(sm6)); return; }
+    if(zt6<=e6.t){ poruka("Nalog ne mo\u017ee biti zavr\u0161en pre nego \u0161to je uzet"); return; }
+    var sudar6=preklapa(sm6,"nalog_poc",e6.t,zt6,e6.t);
+    if(sudar6){ poruka("Preklapa se sa nalogom "+sat(sudar6.a)+"\u2013"+sat(sudar6.b)); return; }
+    e6.poz=zp6;
+    ubaciDogadjaj(sm6,{tip:"nalog", t:zt6, zona:trenutnaZonaDo(sm6,e6.t), poz:zp6, id:zt6+"_"+zp6});
+    redIzbor=null; sheet=null; save(); render(); poruka("Nalog zatvoren \u00b7 "+zp6+" stavki");
+    return;
+  }
+  if(a==="red-obrisi"){
+    var sm7=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm7) return;
+    var i7=redIzbor.i; if(!sm7.dogadjaji[i7]) return;
+    var tip7=sm7.dogadjaji[i7].tip, p7=parIndeks(sm7,i7);
+    var brisi=[i7]; if(p7>=0) brisi.push(p7);
+    brisi.sort(function(x,y){return y-x;});
+    for(var q7=0;q7<brisi.length;q7++) sm7.dogadjaji.splice(brisi[q7],1);
+    var por7 = (tip7==="nalog"||tip7==="nalog_poc") ? "Nalog obrisan"
+             : (tip7==="pauza"||tip7==="kraj_pauze") ? "Pauza obrisana"
+             : (tip7==="cekanje"||tip7==="nastavak") ? "\u010cekanje obrisano" : "Red obrisan";
+    redIzbor=null; sheet=null; save(); render(); poruka(por7);
+    return;
+  }
+  if(a==="dodaj-red"){
+    redIzbor={p:parseInt(el.dataset.p,10), i:-1};
+    dodajTip=el.dataset.t||"nalog"; dodajZona=null; sheet="dodaj-red"; render(); return;
+  }
+  if(a==="dodaj-tip"){ dodajTip=el.dataset.t; render(); return; }
+  if(a==="dodaj-zona"){ dodajZona=el.dataset.z; render(); return; }
+  if(a==="dodaj-potvrdi"){
+    var sm8=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm8) return;
+    var od8=uVreme(sm8,(document.getElementById("dOd")||{}).value);
+    var do8=uVreme(sm8,(document.getElementById("dDo")||{}).value);
+    if(od8==null||do8==null){ poruka("Vreme se upisuje kao 20:43"); return; }
+    if(!uRasponu(sm8,od8)||!uRasponu(sm8,do8)){ poruka("Mora biti u smeni "+rasponTekst(sm8)); return; }
+    if(do8<=od8){ poruka("Kraj mora biti posle po\u010detka"); return; }
+    var por8="", sud8, zz8;
+    if(dodajTip==="nalog"){
+      var dp8=Math.max(0, parseInt((document.getElementById("dPoz")||{}).value,10)||0);
+      if(!dp8){ poruka("Upi\u0161i broj stavki"); return; }
+      sud8=preklapa(sm8,"nalog_poc",od8,do8);
+      if(sud8){ poruka("Preklapa se sa nalogom "+sat(sud8.a)+"\u2013"+sat(sud8.b)); return; }
+      var fil8=(((document.getElementById("dFil")||{}).value)||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+      var nz8=dodajZona||S.aktivne[0];
+      var stara8=trenutnaZonaDo(sm8,od8), posle8=trenutnaZonaDo(sm8,do8);
+      ubaciDogadjaj(sm8,{tip:"nalog_poc", t:od8, poz:dp8, id:"p"+od8, fil:fil8||null});
+      ubaciDogadjaj(sm8,{tip:"nalog", t:do8, zona:nz8, poz:dp8, id:do8+"_"+dp8});
+      if(stara8!==nz8){
+        var imaZ8=false;
+        for(zz8=0;zz8<sm8.dogadjaji.length;zz8++)
+          if(sm8.dogadjaji[zz8].tip==="zona" && sm8.dogadjaji[zz8].t===od8){ sm8.dogadjaji[zz8].zona=nz8; imaZ8=true; }
+        if(!imaZ8) ubaciDogadjaj(sm8,{tip:"zona", zona:nz8, t:od8});
+        if(posle8 && posle8!==nz8){
+          var imaK8=false;
+          for(zz8=0;zz8<sm8.dogadjaji.length;zz8++)
+            if(sm8.dogadjaji[zz8].tip==="zona" && sm8.dogadjaji[zz8].t===do8) imaK8=true;
+          if(!imaK8) ubaciDogadjaj(sm8,{tip:"zona", zona:posle8, t:do8});
+        }
+      }
+      por8="Nalog dodat \u00b7 "+dp8+" stavki";
+    } else if(dodajTip==="pauza"){
+      sud8=preklapa(sm8,"pauza",od8,do8);
+      if(sud8){ poruka("Preklapa se sa pauzom "+sat(sud8.a)+"\u2013"+sat(sud8.b)); return; }
+      ubaciDogadjaj(sm8,{tip:"pauza", t:od8});
+      ubaciDogadjaj(sm8,{tip:"kraj_pauze", t:do8});
+      por8="Pauza dodata \u00b7 "+Math.round((do8-od8)/60000)+" min";
+    } else {
+      sud8=preklapa(sm8,"cekanje",od8,do8);
+      if(sud8){ poruka("Preklapa se sa \u010dekanjem "+sat(sud8.a)+"\u2013"+sat(sud8.b)); return; }
+      var kod8=(((document.getElementById("dKod")||{}).value)||"").trim();
+      ubaciDogadjaj(sm8,{tip:"cekanje", t:od8, kod:kod8, id:"c"+od8});
+      ubaciDogadjaj(sm8,{tip:"nastavak", t:do8});
+      por8="\u010cekanje dodato \u00b7 "+Math.round((do8-od8)/60000)+" min";
+    }
+    sm8.dogadjaji.sort(function(x,y){return x.t-y.t;});
+    redIzbor=null; sheet=null; save(); render(); poruka(por8);
+    return;
+  }
   if(a==="nalog-zona"){
     zonaNalogId=el.dataset.id; zonaNalogNazad=el.dataset.nazad||null;
     sheet="zona-naloga"; render(); return;
@@ -2261,7 +2534,8 @@ document.addEventListener("click", function(ev){
   if(a==="kod"){ keypad={rezim:"kod", v:"", staro:(el.dataset.kod||""), id:el.dataset.id}; render(); return; }
   if(a==="brisi-cekanje"){ obrisiCekanje(el.dataset.id); return; }
   if(a==="dodaj-cekanje"){
-    keypad={rezim:"cek", v:"", pocetakSmene:parseInt(el.dataset.p,10)}; render(); return;
+    redIzbor={p:parseInt(el.dataset.p,10), i:-1};
+    dodajTip="cekanje"; sheet="dodaj-red"; render(); return;
   }
   if(a==="nastavi"){ dogadjaj("nastavak"); poruka("Nastavak rada"); return; }
   if(a==="meni"){ sheet="meni"; render(); return; }
