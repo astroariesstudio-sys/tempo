@@ -247,36 +247,37 @@ function imeZone(z){ return IMENA_ZONA[z] || ""; }
 /* -------------------------------------------------------------------------
    PALLY SISTEM — spisak filijala sa lista u magacinu.
    Zastavice: 1 = sve u kašete (plavo polje)   2 = 4 u visinu (crveni tekst)
-   Filijala koje NEMA na spisku ide na EP. J040 je izuzetak — sa spiska je, ali ide na paletu
-   (EP), 4 u visinu. J04I i J05B (sa celom F3 zonom) nose OBAVEZAN PALLY.
-   WE-Schleuse: sve u kašete, bez obzira na filijalu.
+   Od 02.11.2026 nema više europaleta — SVE filijale idu na pally. Spisak ispod je spisak
+   filijala koje se obavezno pakuju SVE U KAŠETE (WE-Schleuse), uz napomenu 4 u visinu gde
+   stoji. Filijala koje nema na tom spisku ide isto na pally, samo kašete nisu obavezne.
+   Jedini izuzetak je JH7L — online nalog, on ide na EP.
    Sve se može ispraviti u kartici Norme, jer je spisak prepisan sa fotografije.
    ------------------------------------------------------------------------- */
 var SPISAK = [
  "J003","J00A","J00C","J00E","J00F","J00G","J00I","J00J","J00M",
  "J015","J016","J017","J018","J01B","J01C","J01D","J01E","J01H","J01K","J01L","J01N",
  "J021","J023","J024","J025","J027","J02B","J02D","J02J","J02K","J02L","J02M","J02N",
- "J030","J034","J036","J037","J038","J039","J03B","J03C","J03D","J03G","J03H","J03J","J03L","J03M",
- "J045","J047","J048","J049","J04C","J04D","J04E","J04F","J04G","J04I","J04K","J04L","J04N",
+ "J030","J032","J034","J036","J037","J038","J039","J03B","J03C","J03D","J03G","J03H","J03J","J03L","J03M",
+ "J040","J045","J047","J048","J049","J04B","J04C","J04D","J04E","J04F","J04G","J04I","J04K","J04L","J04N",
  "J050","J051","J052","J053","J054","J055","J056","J057","J058","J05A","J05B","J05D","J05G","J05H","J05J","J05M","J05N",
  "J060","J061","J062","J063","J064","J066","J06B","J06D","J06I","J06K","J06N",
- "J071","J073","J074","J075","J077","J078","J079","J07B","J07C","J07D","J07E","J07F","J07G"
+ "J070","J071","J073","J074","J075","J077","J078","J079","J07B","J07C","J07D","J07E","J07F","J07G"
 ];
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "06.10.2026";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "02.11.2026";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
-var FILIJALE_VERZIJA = 5;   /* 06.10.2026 — Daniel prepisao sve plave sa papira (35) */
+var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
- /* 35 plavih — sve u kašete; Daniel prepisao sa papira 06.10.2026 */
+ /* 40 filijala sa spiska WE-Schleuse — obavezno SVE U KAŠETE; 3 = i 4 u visinu.
+    Prepisano sa papira 02.11.2026. */
  "J00A":1,"J00F":3,"J01B":3,"J01C":1,"J01N":1,
- "J02J":1,"J02L":1,"J036":3,"J037":1,"J038":1,"J03M":1,
- "J047":1,"J04C":1,"J04D":1,"J04E":1,"J04F":1,"J04I":1,"J04K":1,
+ "J02J":1,"J02L":1,"J032":1,"J036":3,"J037":1,"J038":1,"J03L":1,"J03M":1,"J040":3,"J047":1,
+ "J04B":1,"J04C":1,"J04D":1,"J04E":1,"J04F":1,"J04I":1,"J04K":1,
  "J051":1,"J05B":1,
- "J06I":1,"J06N":1,
- "J071":1,"J073":1,"J074":1,"J075":1,"J077":1,"J078":1,"J079":1,"J07B":1,
- "J07C":1,"J07D":1,"J07E":1,"J07F":1,"J07G":1
+ "J06I":1,"J06N":1,"J070":1,"J071":1,"J073":1,"J074":1,
+ "J075":1,"J077":1,"J078":1,"J079":1,"J07B":1,"J07C":1,"J07D":1,"J07E":1,"J07F":1,"J07G":1
 };
 /* Pravilo (Daniel, 06.10.2026):
    — svaka filijala SA SPISKA ide obavezan pally;
@@ -284,6 +285,8 @@ var DEF_FILIJALE = {
    — šifra koje nema na spisku ide na EP.
    Ovde stoje samo dopisane napomene sa papira. */
 var NAPOMENA_FIL = {"J05B":"važi i za celu F3 zonu"};
+/* Jedini nalog koji ne ide na pally. */
+var ONLINE = {"JH7L":1};
 /* spisak koji se prikazuje je onaj sačuvan u telefonu — tako dopune ostaju */
 function sveFilijale(){
   var a=[], k;
@@ -323,7 +326,7 @@ function izCirilice(t){
   for(i=0;i<t.length;i++){ c=t.charAt(i); r += (CIR_LAT[c]!==undefined ? CIR_LAT[c] : c); }
   return r;
 }
-function postoji(k){ return k==="J040" || (S.filijale && S.filijale[k]!==undefined); }
+function postoji(k){ return ONLINE[k]!==undefined || (S.filijale && S.filijale[k]!==undefined); }
 function nadjiKod(kod){
   kod = izCirilice(String(kod||"").toUpperCase()).replace(/[^A-Z0-9]/g,"");
   if(!kod) return null;
@@ -341,25 +344,22 @@ function pakovanje(kod){
   var n = nadjiKod(kod);
   if(!n) return null;
   var r = {kod:n.kod, upisano:n.upisano, ispravljen:!!n.ispravljen,
-           vise:n.vise||null, vanSpiska:!!n.vanSpiska, visina:false, obavezan:null};
-  /* J040 je jedina sa spiska koja ide na paletu, i to 4 u visinu */
-  if(n.kod==="J040"){
-    r.vrsta="ep"; r.nosac="EP — EUROPALETA"; r.kako=""; r.visina=true;
-    r.napomena="jedina sa spiska koja ne ide na pally";
+           vise:n.vise||null, nepoznat:!!n.vanSpiska, visina:false, kasete:false};
+  /* online je jedini nalog koji ne ide na pally */
+  if(ONLINE[n.kod]!==undefined){
+    r.vrsta="ep"; r.nosac="EP — EUROPALETA"; r.kako=""; r.napomena="jedini nalog koji ne ide na pally";
     return r;
   }
-  if(n.vanSpiska){
-    r.vrsta="ep"; r.nosac="EP — EUROPALETA"; r.kako=""; r.napomena="nije na spisku";
-    return r;
-  }
-  var f = S.filijale[n.kod] || 0;
-  r.vrsta    = (f & 1) ? "kasete" : "pally";
-  r.nosac    = "PALLY";
-  r.kasete   = !!(f & 1);          /* plava na papiru */
-  r.kako     = r.kasete ? "SVE U KAŠETE" : "";
-  r.visina   = !!(f & 2);
-  r.obavezan = true;               /* sve sa spiska je obavezan pally */
-  r.napomena = NAPOMENA_FIL[n.kod] || "";
+  /* od 02.11.2026 sve ide na pally — pitanje je samo da li su kašete obavezne */
+  var f = (S.filijale && S.filijale[n.kod]) || 0;
+  r.nosac  = "PALLY";
+  r.kasete = !!(f & 1);
+  r.visina = !!(f & 2);
+  r.vrsta  = r.kasete ? "kasete" : "pally";
+  r.kako   = r.kasete ? "OBAVEZNO SVE U KAŠETE" : "";
+  r.napomena = r.kasete ? (NAPOMENA_FIL[n.kod] || "")
+                        : (n.vanSpiska ? "nije među poznatim šiframa — proveri je; kašete nisu obavezne"
+                                       : "kašete nisu obavezne");
   return r;
 }
 
@@ -1829,8 +1829,9 @@ function viewNorme(){
     }
     h += '</div>';
   }
-  h += '<div class="tiny muted" style="margin-top:10px">Filijala koje nema na spisku ide na EP. '
-    +  'J040 je izuzetak — jedina sa spiska koja ide na EP, ali 4 u visinu.</div></div>';
+  h += '<div class="tiny muted" style="margin-top:10px">Spisak iznad su filijale sa <b>obaveznim kašetama</b> '
+    +  '(WE-Schleuse), <b>4u</b> znači i 4 u visinu. Sve ostale filijale idu isto na pally, samo kašete '
+    +  'nisu obavezne.</div></div>';
 
   h += '<div class="card"><div class="lbl">Podaci</div>'
     + '<div class="tiny muted" style="margin:5px 0 8px">Sve stoji samo u ovom telefonu. Kopiraj tekst ispod na sigurno mesto s vremena na vreme.</div>'
@@ -1934,13 +1935,13 @@ function ovSheet(){
       +   'style="width:104px;text-transform:uppercase"></div>'
       +  '<button class="btn main wide" style="margin-top:8px;min-height:50px" data-act="fil-proveri">Proveri šifru</button>'
       +  '<div class="tiny muted" style="margin:10px 2px 0;padding-top:8px;border-top:1px solid var(--line)">'
-      +  '<b>Sve sa spiska ide obavezan pally.</b> Plave (označene <b>+ kašete</b>) idu pally i sve u kašete. '
-      +  'Šifra koje nema na spisku ide na EP.</div>'
+      +  '<b>Sve ide na pally.</b> Filijale sa spiska (označene <b>+ kašete</b>) pakuju se obavezno sve u kašete. '
+      +  'Ostale isto pally, kašete nisu obavezne.</div>'
       +  '<div class="tiny muted" style="margin:6px 2px 0">Slovo O i nulu, slovo I i jedinicu, '
       +  'i ćirilična slova aplikacija sama prepoznaje.</div>'
       +  '<div class="tiny muted" style="margin:10px 2px 0;padding-top:8px;border-top:1px solid var(--line)">'
       +  '<b>WE-Schleuse</b> — pakovati sve u kašete, bez obzira na filijalu.</div>'
-      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="J040">J040 — EP, 4 u visinu</button>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:50px" data-act="fil-kod" data-k="JH7L">Online — EP</button>'
       +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="fil-preskoci">Preskoči, bez filijale</button>';
 
   } else if(sheet==="pakovanje"){
@@ -1960,33 +1961,29 @@ function ovSheet(){
           +  '<div style="font-weight:700;color:var(--bad)">Dve šifre liče: '+esc(pk.vise.join(" i "))+'</div>'
           +  '<div class="tiny" style="margin-top:4px">Izaberi pravu sa spiska, ne pakuj po ovome.</div></div>';
 
-      h += '<div class="lbl" style="text-align:center">Filijala '+esc(pk.kod)+'</div>'
+      h += '<div class="lbl" style="text-align:center">'
+        +  (pk.vrsta==="ep" ? 'Online nalog' : 'Filijala '+esc(pk.kod))+'</div>'
         +  '<div style="text-align:center;padding:18px 8px 6px">'
         +   '<div style="font-size:34px;font-weight:800;letter-spacing:-.01em;line-height:1.05;color:'+boja+'">'
         +     esc(pk.nosac)+'</div>'
-        +   (pk.kako ? '<div style="font-size:26px;font-weight:800;line-height:1.1;margin-top:6px;'
+        +   (pk.kako ? '<div style="font-size:25px;font-weight:800;line-height:1.1;margin-top:8px;'
                      + 'color:var(--good)">'+esc(pk.kako)+'</div>' : '')
         +   (pk.visina ? '<div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:6px;'
                        + 'color:var(--bad)">4 U VISINU</div>' : '')
-        +   (pk.obavezan
-              ? '<div class="tiny" style="margin-top:12px;color:var(--bad);font-weight:700;'
-                + 'letter-spacing:.06em">OBAVEZAN PALLY</div>'
-              : '')
-        +   (pk.napomena ? '<div class="tiny muted" style="margin-top:6px">'+esc(pk.napomena)+'</div>' : '')
+        +   (pk.napomena ? '<div class="tiny'+(pk.nepoznat?'':' muted')+'" style="margin-top:10px'
+                         + (pk.nepoznat?';color:var(--bad);font-weight:700':'')+'">'
+                         + esc(pk.napomena)+'</div>' : '')
         +  '</div>';
-      if(pk.vrsta==="ep" && pk.kod!=="—" && pk.kod!=="J040"){
-        h += '<div class="tiny" style="text-align:center;margin:4px 0 8px;color:var(--bad)">'
-          +  'Pročitaj još jednom šifru sa naloga. Ako je baš ta, ide na EP — '
-          +  'šifra koje nema na spisku uvek ide na EP.</div>'
-          +  '<button class="btn ghost wide" style="min-height:46px" data-act="fil-dodaj">'
-          +  'Dodaj '+esc(pk.kod)+' u spisak</button>';
+      if(pk.nepoznat && pk.kod!=="—"){
+        h += '<button class="btn ghost wide" style="min-height:46px" data-act="fil-dodaj">'
+          +  'Dodaj '+esc(pk.kod)+' među poznate šifre</button>';
       }
-      if(pk.vrsta!=="ep" && pk.kod!=="J040" && !pk.vanSpiska){
-        var fv=S.filijale[pk.kod]||0;
+      if(pk.vrsta!=="ep"){
+        var fv=(S.filijale&&S.filijale[pk.kod])||0;
         h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">ako se ne slaže sa spiskom, ispravi ovde</div>'
           +  '<div class="row" style="gap:8px">'
           +   '<button class="btn ghost" style="flex:1;min-height:46px'+((fv&1)?';color:var(--good)':'')+'" data-act="fil-kasete">'
-          +     ((fv&1)?"✓ ":"")+'kašete</button>'
+          +     ((fv&1)?"✓ ":"")+'obavezne kašete</button>'
           +   '<button class="btn ghost" style="flex:1;min-height:46px'+((fv&2)?';color:var(--bad)':'')+'" data-act="fil-visina">'
           +     ((fv&2)?"✓ ":"")+'4 u visinu</button>'
           +  '</div>';
@@ -2188,7 +2185,10 @@ document.addEventListener("click", function(ev){
   if(a==="fil-dalje"){ sheet=null; otvoriUnosStavki(); return; }
   if(a==="fil-kasete" || a==="fil-visina"){
     var fkod=filijalaZaNalog, bit=(a==="fil-kasete")?1:2;
-    if(fkod && S.filijale[fkod]!==undefined){ S.filijale[fkod] ^= bit; save(); render(); }
+    if(fkod && fkod!=="—" && ONLINE[fkod]===undefined){
+      if(S.filijale[fkod]===undefined) S.filijale[fkod]=0;
+      S.filijale[fkod] ^= bit; save(); render();
+    }
     return;
   }
   if(a==="fil-uredi"){
