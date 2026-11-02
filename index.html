@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026b";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026c";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -566,8 +566,8 @@ function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
    ========================================================================= */
 function razlozi(sm, sada){
   var kraj = sm.kraj || sada;
-  var segs=[], cek=[], pau=[], praz=[], nal=[], spr=[],
-      cur=null, cw=null, cp=null, cpr=null, cn=null, cs=null, uNal=false, i, e;
+  var segs=[], cek=[], pau=[], praz=[], nal=[], spr=[], drg=[],
+      cur=null, cw=null, cp=null, cpr=null, cn=null, cs=null, cd=null, uNal=false, i, e;
   /* Od početka smene do prvog uzetog naloga takođe teče prazan hod — ali tek
      od trenutka kad si stvarno stigao. Kašnjenje se broji u minute, kao i kod njih,
      samo se ne upisuje kao zabušavanje na podu. */
@@ -582,6 +582,9 @@ function razlozi(sm, sada){
     else if(e.tip==="kraj_pauze"){ if(cp){ cp.kraj=e.t; cp=null; } }
     /* spremanje opreme i presvlačenje na kraju smene — vreme se broji, ali nije prazan hod */
     else if(e.tip==="sprema"){ if(!cs){ cs={poc:e.t,kraj:null}; spr.push(cs);} }
+    /* vreme van komisioniranja — kod njih ga nema u fondu, pa ni kod nas */
+    else if(e.tip==="drugi"){ if(!cd){ cd={poc:e.t,kraj:null}; drg.push(cd);} }
+    else if(e.tip==="kraj_drugog"){ if(cd){ cd.kraj=e.t; cd=null; } }
     /* prazan hod = od zatvaranja naloga do uzimanja sledećeg */
     else if(e.tip==="nalog_poc"){
       if(cpr){ cpr.kraj=e.t; cpr=null; }
@@ -598,8 +601,8 @@ function razlozi(sm, sada){
     }
   }
   function zatvori(a){ for(var j=0;j<a.length;j++) if(a[j].kraj==null) a[j].kraj=kraj; }
-  zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal); zatvori(spr);
-  return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, spr:spr, kraj:kraj};
+  zatvori(segs); zatvori(cek); zatvori(pau); zatvori(praz); zatvori(nal); zatvori(spr); zatvori(drg);
+  return {segs:segs, cek:cek, pau:pau, praz:praz, nal:nal, spr:spr, drg:drg, kraj:kraj};
 }
 
 /* Neto trajanje praznog hoda — bez čekanja i bez pauze koji u njega upadnu.
@@ -610,6 +613,7 @@ function prazNeto(t, p, doKada){
   for(j=0;j<t.cek.length;j++) m -= preklop(p.poc,kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
   for(j=0;j<t.pau.length;j++) m -= preklop(p.poc,kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
   if(t.spr) for(j=0;j<t.spr.length;j++) m -= preklop(p.poc,kraj,t.spr[j].poc,t.spr[j].kraj)/60000;
+  if(t.drg) for(j=0;j<t.drg.length;j++) m -= preklop(p.poc,kraj,t.drg[j].poc,t.drg[j].kraj)/60000;
   return Math.max(0,m);
 }
 
@@ -618,6 +622,7 @@ function prazNeto(t, p, doKada){
 function nalogStat(t, n){
   var min=(n.kraj-n.poc)/60000, cek=0, pau=0, j;
   for(j=0;j<t.cek.length;j++) cek += preklop(n.poc,n.kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+  if(t.drg) for(j=0;j<t.drg.length;j++) cek += preklop(n.poc,n.kraj,t.drg[j].poc,t.drg[j].kraj)/60000;
   for(j=0;j<t.pau.length;j++) pau += preklop(n.poc,n.kraj,t.pau[j].poc,t.pau[j].kraj)/60000;
   var cisto = Math.max(0, min-cek);              // pauza OSTAJE unutra
   var bezPauze = Math.max(0, min-cek-pau);
@@ -650,6 +655,7 @@ function obracun(sm, sada){
     s = t.segs[i];
     m = (s.kraj - s.poc)/60000;
     for(j=0;j<t.cek.length;j++) m -= preklop(s.poc,s.kraj,t.cek[j].poc,t.cek[j].kraj)/60000;
+    for(j=0;j<t.drg.length;j++) m -= preklop(s.poc,s.kraj,t.drg[j].poc,t.drg[j].kraj)/60000;
     uzmi(s.zona).min += Math.max(0,m);
   }
   /* Pauza OSTAJE u zoni u kojoj je uzeta \u2014 tako je i kod njih.
@@ -671,7 +677,8 @@ function obracun(sm, sada){
     zone[z].tempo = zone[z].min>=1 ? zone[z].poz/zone[z].min*60 : null;
     zone[z].odst  = (n>0 && zone[z].tempo!=null) ? (zone[z].tempo/n-1)*100 : null;
   }
-  var cekMin=0, pauMin=0, prazMin=0, spremMin=0;
+  var cekMin=0, pauMin=0, prazMin=0, spremMin=0, drgMin=0;
+  for(i=0;i<t.drg.length;i++) drgMin += (t.drg[i].kraj-t.drg[i].poc)/60000;
   for(i=0;i<t.cek.length;i++) cekMin += (t.cek[i].kraj-t.cek[i].poc)/60000;
   for(i=0;i<t.pau.length;i++) pauMin += (t.pau[i].kraj-t.pau[i].poc)/60000;
   for(i=0;i<t.spr.length;i++) spremMin += (t.spr[i].kraj-t.spr[i].poc)/60000;
@@ -725,7 +732,7 @@ function obracun(sm, sada){
               trazeni:   (pMeri && pPot>0) ? pPoz/pPot*60 : null,
               razlika:   (pMeri && pPot>0) ? (pPot/pMin-1)*100 : null};
 
-  return {zone:zone, ukMin:ukMin, ukPoz:ukPoz, potMin:potMin, cekMin:cekMin, pauMin:pauMin,
+  return {zone:zone, ukMin:ukMin, ukPoz:ukPoz, potMin:potMin, cekMin:cekMin, pauMin:pauMin, drgMin:drgMin,
           prazMin:prazMin, spremMin:spremMin, nalogMin:nalogMin, proj:proj,
           radMin:radMin, meri:meri, ostvareni:ostvareni, trazeni:trazeni, razlika:razlika,
           radniTempo: (meri && radMin>=1) ? ukPoz/radMin*60 : null,
@@ -898,13 +905,15 @@ function opisReda(e){
   if(e.tip==="nalog_poc") return "uzet nalog";
   if(e.tip==="nalog")     return "nalog zavr\u0161en \u00b7 "+e.poz+" pozicija";
   if(e.tip==="sprema")    return "odlaganje opreme";
+  if(e.tip==="drugi")     return "oti\u0161ao na drugi posao";
+  if(e.tip==="kraj_drugog")return "kraj drugog posla";
   return null;
 }
 /* Parnjak reda: nalog_poc\u2194nalog, pauza\u2194kraj_pauze, cekanje\u2194nastavak. */
 function parIndeks(sm, i){
   var e=sm.dogadjaji[i], j;
-  var napred={nalog_poc:"nalog", pauza:"kraj_pauze", cekanje:"nastavak"};
-  var nazad ={nalog:"nalog_poc", kraj_pauze:"pauza", nastavak:"cekanje"};
+  var napred={nalog_poc:"nalog", pauza:"kraj_pauze", cekanje:"nastavak", drugi:"kraj_drugog"};
+  var nazad ={nalog:"nalog_poc", kraj_pauze:"pauza", nastavak:"cekanje", kraj_drugog:"drugi"};
   if(napred[e.tip]){
     for(j=i+1;j<sm.dogadjaji.length;j++){
       if(sm.dogadjaji[j].tip===e.tip) break;
@@ -946,7 +955,7 @@ function preveziSve(sm){
   }
   for(i=0;i<z.length;i++) preveziNaloge(sm, z[i].t, z[i].zona);
 }
-function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"; }
+function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"||tip==="drugi"; }
 /* "7:05", "07:05", "0705", "7.05" \u2014 sve isto; uvek na dan te smene. */
 function uVreme(sm, tekst){
   var t=String(tekst||"").trim().replace(/[.,\s-]/g,":");
@@ -1623,9 +1632,12 @@ function viewDan(){
     +    minicol("Prazan hod", cel(o.prazMin)+" min", "ostaje u normi")
     +    minicol("Pauza", cel(o.pauMin)+" min", "ostaje u normi")
     +    (o.spremMin>=0.5 ? minicol("Odlaganje opreme", cel(o.spremMin)+" min", "kraj smene, u normi") : "")
+    +    (o.drgMin>=0.5 ? minicol("Drugi posao", cel(o.drgMin)+" min", "van komisioniranja, odbijeno") : "")
     +    minicol("Brzina u nalozima", o.nalogTempo!=null?br(o.nalogTempo,0)+" poz/h":"—", "samo vreme u nalozima")
     +  '</div>'
-    +  '<div class="tiny muted">Kontrola: '+cel(o.ukMin)+' + '+cel(o.cekMin)+' = '+cel(o.ukMin+o.cekMin)+' min od početka do kraja smene.</div>'
+    +  '<div class="tiny muted">Kontrola: '+cel(o.ukMin)+' + '+cel(o.cekMin)
+    +    (o.drgMin>=0.5 ? ' + '+cel(o.drgMin) : '')
+    +    ' = '+cel(o.ukMin+o.cekMin+o.drgMin)+' min od početka do kraja smene.</div>'
     +  (sm.kasnjenje>0
         ? '<div class="row" style="border-top:1px solid var(--line);padding-top:9px">'
           + '<div class="lbl">Kašnjenje u smenu</div><div class="sp"></div>'
@@ -1655,7 +1667,9 @@ function viewDan(){
     +  '</div><div class="row" style="gap:7px;margin-top:7px">'
     +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="pauza">+ Pauza</button>'
     +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="cekanje">+ \u010cekanje</button>'
-    +  '</div></div>';
+    +  '</div>'
+    +  '<button class="btn ghost wide" style="margin-top:7px;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="drugi">+ Drugi posao \u2014 nisam bio na komisioniranju</button>'
+    +  '</div>';
 
   h += nalozeKartica(sm, o, 0);
 
@@ -2089,7 +2103,8 @@ function ovSheet(){
       var rp = parIndeks(rs, redIzbor.i);
       var imeP = (r2.tip==="nalog_poc"||r2.tip==="nalog") ? "nalog"
                : (r2.tip==="pauza"||r2.tip==="kraj_pauze") ? "pauzu"
-               : (r2.tip==="cekanje"||r2.tip==="nastavak") ? "\u010dekanje" : "red";
+               : (r2.tip==="cekanje"||r2.tip==="nastavak") ? "\u010dekanje"
+               : (r2.tip==="drugi"||r2.tip==="kraj_drugog") ? "drugi posao" : "red";
       h += '<div class="lbl">Ispravi red</div>'
         +  '<div style="font-size:18px;font-weight:700;margin:6px 0 2px">'+esc(opisReda(r2))+'</div>'
         +  '<div class="tiny muted" style="margin-bottom:12px">Smena '+rasponTekst(rs)
@@ -2130,10 +2145,11 @@ function ovSheet(){
     var ds = redIzbor ? smenaPoPocetku(redIzbor.p) : null;
     if(!ds){ h += '<div class="empty">Nema smene.</div>'; }
     else {
-      var tipovi=[["nalog","Nalog"],["zona","Zona"],["pauza","Pauza"],["cekanje","\u010cekanje"]], dq;
+      var tipovi=[["nalog","Nalog"],["zona","Zona"],["pauza","Pauza"],["cekanje","\u010cekanje"],
+                  ["drugi","Drugi posao"]], dq;
       h += '<div class="lbl">Dodaj u tok dana</div>'
         +  '<div class="tiny muted" style="margin:5px 0 10px">Smena '+rasponTekst(ds)+'. Vreme se upisuje kao 20:43.</div>'
-        +  '<div class="row" style="gap:6px;margin-bottom:14px">';
+        +  '<div class="row" style="gap:6px;margin-bottom:14px;flex-wrap:wrap">';
       for(dq=0;dq<tipovi.length;dq++)
         h += '<button class="chip'+(dodajTip===tipovi[dq][0]?" on":"")+'" style="flex:1;text-align:center" '
           +  'data-act="dodaj-tip" data-t="'+tipovi[dq][0]+'">'+tipovi[dq][1]+'</button>';
@@ -2166,6 +2182,9 @@ function ovSheet(){
       }
       if(dodajTip==="cekanje")
         h += '<div class="f"><label>Pozicija</label><input type="text" id="dKod" placeholder="240-190-02" style="width:150px"></div>';
+      if(dodajTip==="drugi")
+        h += '<div class="tiny muted" style="margin:0 2px 10px">Vreme provedeno van komisioniranja. '
+          +  'Izlazi iz fonda isto kao \u010dekanje, ali se vodi odvojeno \u2014 ne ulazi u spisak \u010dekanja za prijavu.</div>';
       h += '<div class="f"><label>Od</label><input type="text" id="dOd" inputmode="numeric" maxlength="5" placeholder="20:43" style="width:96px"></div>'
         +  (dodajTip==="zona" ? "" :
            '<div class="f"><label>Do</label><input type="text" id="dDo" inputmode="numeric" maxlength="5" placeholder="21:31" style="width:96px"></div>')
@@ -2445,7 +2464,8 @@ document.addEventListener("click", function(ev){
     if(tip7==="zona") preveziSve(sm7);
     var por7 = (tip7==="nalog"||tip7==="nalog_poc") ? "Nalog obrisan"
              : (tip7==="pauza"||tip7==="kraj_pauze") ? "Pauza obrisana"
-             : (tip7==="cekanje"||tip7==="nastavak") ? "\u010cekanje obrisano" : "Red obrisan";
+             : (tip7==="cekanje"||tip7==="nastavak") ? "\u010cekanje obrisano"
+             : (tip7==="drugi"||tip7==="kraj_drugog") ? "Drugi posao obrisan" : "Red obrisan";
     redIzbor=null; sheet=null; save(); render(); poruka(por7);
     return;
   }
@@ -2505,6 +2525,12 @@ document.addEventListener("click", function(ev){
       ubaciDogadjaj(sm8,{tip:"pauza", t:od8});
       ubaciDogadjaj(sm8,{tip:"kraj_pauze", t:do8});
       por8="Pauza dodata \u00b7 "+Math.round((do8-od8)/60000)+" min";
+    } else if(dodajTip==="drugi"){
+      sud8=preklapa(sm8,"drugi",od8,do8);
+      if(sud8){ poruka("Preklapa se sa drugim poslom "+sat(sud8.a)+"\u2013"+sat(sud8.b)); return; }
+      ubaciDogadjaj(sm8,{tip:"drugi", t:od8});
+      ubaciDogadjaj(sm8,{tip:"kraj_drugog", t:do8});
+      por8="Drugi posao \u00b7 "+Math.round((do8-od8)/60000)+" min van fonda";
     } else {
       sud8=preklapa(sm8,"cekanje",od8,do8);
       if(sud8){ poruka("Preklapa se sa \u010dekanjem "+sat(sud8.a)+"\u2013"+sat(sud8.b)); return; }
