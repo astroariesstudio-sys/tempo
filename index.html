@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "02.11.2026b";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -933,6 +933,31 @@ function parIndeks(sm, i){
     return -1;
   }
   return -1;
+}
+/* Zona va\u017ei od svog trenutka do slede\u0107e promene. Pozicije moraju da prate zonu:
+   ina\u010de zona dobije minute bez pozicija, a stara zadr\u017ei pozicije bez minuta. */
+function preveziNaloge(sm, odT, zona){
+  var i, e, doT=null;
+  for(i=0;i<sm.dogadjaji.length;i++){
+    e=sm.dogadjaji[i];
+    if(e.tip==="zona" && e.t>odT && (doT===null || e.t<doT)) doT=e.t;
+  }
+  for(i=0;i<sm.dogadjaji.length;i++){
+    e=sm.dogadjaji[i];
+    if(e.tip==="nalog" && e.t>odT && (doT===null || e.t<=doT)) e.zona=zona;
+  }
+}
+/* Prolazak kroz sve promene zone \u2014 svaki nalog dobija zonu koja je tada va\u017eila. */
+function preveziSve(sm){
+  var z=[], i, e;
+  for(i=0;i<sm.dogadjaji.length;i++) if(sm.dogadjaji[i].tip==="zona") z.push(sm.dogadjaji[i]);
+  z.sort(function(a,b){return a.t-b.t;});
+  if(!z.length) return;
+  for(i=0;i<sm.dogadjaji.length;i++){
+    e=sm.dogadjaji[i];
+    if(e.tip==="nalog" && e.t<=z[0].t) e.zona=z[0].zona;
+  }
+  for(i=0;i<z.length;i++) preveziNaloge(sm, z[i].t, z[i].zona);
 }
 function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"; }
 /* "7:05", "07:05", "0705", "7.05" \u2014 sve isto; uvek na dan te smene. */
@@ -1639,6 +1664,8 @@ function viewDan(){
   }
   h += '<div class="row" style="gap:7px;margin-top:12px">'
     +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="nalog">+ Nalog</button>'
+    +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="zona">+ Zona</button>'
+    +  '</div><div class="row" style="gap:7px;margin-top:7px">'
     +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="pauza">+ Pauza</button>'
     +  '<button class="btn ghost" style="flex:1;min-height:46px" data-act="dodaj-red" data-p="'+sm.pocetak+'" data-t="cekanje">+ \u010cekanje</button>'
     +  '</div></div>';
@@ -2116,7 +2143,7 @@ function ovSheet(){
     var ds = redIzbor ? smenaPoPocetku(redIzbor.p) : null;
     if(!ds){ h += '<div class="empty">Nema smene.</div>'; }
     else {
-      var tipovi=[["nalog","Nalog"],["pauza","Pauza"],["cekanje","\u010cekanje"]], dq;
+      var tipovi=[["nalog","Nalog"],["zona","Zona"],["pauza","Pauza"],["cekanje","\u010cekanje"]], dq;
       h += '<div class="lbl">Dodaj u tok dana</div>'
         +  '<div class="tiny muted" style="margin:5px 0 10px">Smena '+rasponTekst(ds)+'. Vreme se upisuje kao 20:43.</div>'
         +  '<div class="row" style="gap:6px;margin-bottom:14px">';
@@ -2138,10 +2165,23 @@ function ovSheet(){
           +   'autocapitalize="characters" autocomplete="off" spellcheck="false" style="width:110px;text-transform:uppercase"></div>'
           +  '<div class="f"><label>Stavki</label><input type="number" id="dPoz" inputmode="numeric" style="width:96px"></div>';
       }
+      if(dodajTip==="zona"){
+        var zl6=S.aktivne.slice(), ze;
+        if(!dodajZona || zl6.indexOf(dodajZona)<0) dodajZona=zl6[0];
+        h += '<div class="lbl">Od tog trenutka radim u zoni</div><div class="zones">';
+        for(ze=0;ze<zl6.length;ze++)
+          h += '<button class="z'+(zl6[ze]===dodajZona?" on":"")+'" data-act="dodaj-zona" data-z="'+zl6[ze]+'">'
+            +  '<span class="k">'+zl6[ze]+'</span>'
+            +  (imeZone(zl6[ze]) ? '<span class="v" style="opacity:.8">'+imeZone(zl6[ze])+'</span>' : '')
+            +  '<span class="v">norma '+(S.norme[zl6[ze]]||"\u2014")+'</span></button>';
+        h += '</div><div class="tiny muted" style="margin:8px 2px 0">Va\u017ei do slede\u0107e promene zone. '
+          +  'Nalozi zavr\u0161eni u tom vremenu prelaze u ovu zonu zajedno sa pozicijama.</div>';
+      }
       if(dodajTip==="cekanje")
         h += '<div class="f"><label>Pozicija</label><input type="text" id="dKod" placeholder="240-190-02" style="width:150px"></div>';
       h += '<div class="f"><label>Od</label><input type="text" id="dOd" inputmode="numeric" maxlength="5" placeholder="20:43" style="width:96px"></div>'
-        +  '<div class="f"><label>Do</label><input type="text" id="dDo" inputmode="numeric" maxlength="5" placeholder="21:31" style="width:96px"></div>'
+        +  (dodajTip==="zona" ? "" :
+           '<div class="f"><label>Do</label><input type="text" id="dDo" inputmode="numeric" maxlength="5" placeholder="21:31" style="width:96px"></div>')
         +  '<button class="btn main wide" style="margin-top:14px;min-height:52px" data-act="dodaj-potvrdi">Dodaj</button>'
         +  '<button class="btn ghost wide" style="margin-top:8px;min-height:44px" data-act="red-odustani">Odustani</button>';
     }
@@ -2364,7 +2404,7 @@ document.addEventListener("click", function(ev){
   if(a==="red-odustani"){ redIzbor=null; sheet=null; render(); return; }
   if(a==="red-zona"){
     var rz=redIzbor?smenaPoPocetku(redIzbor.p):null;
-    if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; save(); render(); }
+    if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; preveziSve(rz); save(); render(); }
     return;
   }
   if(a==="red-sacuvaj"){
@@ -2389,6 +2429,7 @@ document.addEventListener("click", function(ev){
     var kd5=document.getElementById("rKod");
     if(kd5 && e5.tip==="cekanje") e5.kod=kd5.value.trim();
     sm5.dogadjaji.sort(function(x,y){return x.t-y.t;});
+    preveziSve(sm5);
     redIzbor=null; sheet=null; save(); render(); poruka("Ispravljeno");
     return;
   }
@@ -2414,6 +2455,7 @@ document.addEventListener("click", function(ev){
     var brisi=[i7]; if(p7>=0) brisi.push(p7);
     brisi.sort(function(x,y){return y-x;});
     for(var q7=0;q7<brisi.length;q7++) sm7.dogadjaji.splice(brisi[q7],1);
+    if(tip7==="zona") preveziSve(sm7);
     var por7 = (tip7==="nalog"||tip7==="nalog_poc") ? "Nalog obrisan"
              : (tip7==="pauza"||tip7==="kraj_pauze") ? "Pauza obrisana"
              : (tip7==="cekanje"||tip7==="nastavak") ? "\u010cekanje obrisano" : "Red obrisan";
@@ -2429,11 +2471,24 @@ document.addEventListener("click", function(ev){
   if(a==="dodaj-potvrdi"){
     var sm8=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm8) return;
     var od8=uVreme(sm8,(document.getElementById("dOd")||{}).value);
-    var do8=uVreme(sm8,(document.getElementById("dDo")||{}).value);
-    if(od8==null||do8==null){ poruka("Vreme se upisuje kao 20:43"); return; }
-    if(!uRasponu(sm8,od8)||!uRasponu(sm8,do8)){ poruka("Mora biti u smeni "+rasponTekst(sm8)); return; }
+    if(od8==null){ poruka("Vreme se upisuje kao 20:43"); return; }
+    if(!uRasponu(sm8,od8)){ poruka("Mora biti u smeni "+rasponTekst(sm8)); return; }
+    var por8="", sud8, zz8, do8=null;
+    if(dodajTip==="zona"){
+      var nzz=dodajZona||S.aktivne[0], imaz=false, zi;
+      for(zi=0;zi<sm8.dogadjaji.length;zi++)
+        if(sm8.dogadjaji[zi].tip==="zona" && sm8.dogadjaji[zi].t===od8){ sm8.dogadjaji[zi].zona=nzz; imaz=true; }
+      if(!imaz) ubaciDogadjaj(sm8,{tip:"zona", zona:nzz, t:od8});
+      preveziSve(sm8);
+      sm8.dogadjaji.sort(function(x,y){return x.t-y.t;});
+      redIzbor=null; sheet=null; save(); render();
+      poruka("Od "+sat(od8)+" zona "+nzz+(imeZone(nzz)?" \u00b7 "+imeZone(nzz):""));
+      return;
+    }
+    do8=uVreme(sm8,(document.getElementById("dDo")||{}).value);
+    if(do8==null){ poruka("Vreme se upisuje kao 20:43"); return; }
+    if(!uRasponu(sm8,do8)){ poruka("Mora biti u smeni "+rasponTekst(sm8)); return; }
     if(do8<=od8){ poruka("Kraj mora biti posle po\u010detka"); return; }
-    var por8="", sud8, zz8;
     if(dodajTip==="nalog"){
       var dp8=Math.max(0, parseInt((document.getElementById("dPoz")||{}).value,10)||0);
       if(!dp8){ poruka("Upi\u0161i broj stavki"); return; }
