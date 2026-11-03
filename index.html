@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026f";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026g";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -596,7 +596,12 @@ function razlozi(sm, sada){
     else if(e.tip==="nalog"){
       if(uNal){
         uNal=false;
-        if(cn){ cn.kraj=e.t; if(!cn.poz) cn.poz=e.poz||0; cn.krajId=e.id; cn=null; }
+        if(cn){
+          cn.kraj=e.t; if(!cn.poz) cn.poz=e.poz||0; cn.krajId=e.id;
+          /* zona upisana na zatvaranju je merodavna \u2014 po njoj se broje i pozicije */
+          if(e.zona) cn.zona=e.zona;
+          cn=null;
+        }
         cpr={poc:e.t,kraj:null}; praz.push(cpr);
       }
     }
@@ -1650,9 +1655,12 @@ function viewDan(){
     +  '<div class="scroll"><table><thead><tr><th>Zona</th><th>Vreme</th><th>Prazan hod</th><th>Pozicije</th><th>Ostvareno</th><th>Norma</th><th>Odst.</th></tr></thead><tbody>';
   for(z in o.zone){
     var d=o.zone[z];
+    /* zona sa vremenom a bez pozicija: crtica umesto 0 i −100%, jer to nije učinak */
+    var nemaPoz = !(d.poz > 0);
     h += '<tr><td>'+z+'</td><td>'+cel(d.min)+'</td><td class="muted">'+cel(d.praz)+'</td><td>'+cel(d.poz)+'</td>'
-      +  '<td>'+br(d.tempo,0)+'</td><td>'+(d.norma||"—")+'</td>'
-      +  '<td class="'+kl(d.odst)+'">'+pct(d.odst,0)+'</td></tr>';
+      +  '<td>'+(nemaPoz ? '<span class="muted">—</span>' : br(d.tempo,0))+'</td>'
+      +  '<td>'+(d.norma||"—")+'</td>'
+      +  '<td class="'+(nemaPoz?"muted":kl(d.odst))+'">'+(nemaPoz ? "—" : pct(d.odst,0))+'</td></tr>';
   }
   h += '<tr><td>UK</td><td>'+cel(o.ukMin)+'</td><td class="muted">'+cel(o.prazMin)+'</td><td>'+cel(o.ukPoz)+'</td>'
     +  '<td>'+br(o.ostvareni)+'</td><td>'+br(o.trazeni)+'</td>'
@@ -2538,7 +2546,14 @@ document.addEventListener("click", function(ev){
       preveziSve(sm8);
       sm8.dogadjaji.sort(function(x,y){return x.t-y.t;});
       redIzbor=null; sheet=null; save(); render();
-      poruka("Od "+sat(od8)+" zona "+nzz+(imeZone(nzz)?" \u00b7 "+imeZone(nzz):""));
+      var usred=null, ui;
+      for(ui=0;ui<sm8.dogadjaji.length;ui++) if(sm8.dogadjaji[ui].tip==="nalog_poc"){
+        var uj=parIndeks(sm8,ui);
+        if(uj>=0 && sm8.dogadjaji[ui].t<od8 && sm8.dogadjaji[uj].t>od8)
+          usred={a:sm8.dogadjaji[ui].t, b:sm8.dogadjaji[uj].t};
+      }
+      poruka("Od "+sat(od8)+" zona "+nzz+(imeZone(nzz)?" \u00b7 "+imeZone(nzz):"")
+        + (usred ? " \u00b7 nalog "+sat(usred.a)+"\u2013"+sat(usred.b)+" ceo ide u "+nzz : ""));
       return;
     }
     do8=uVreme(sm8,(document.getElementById("dDo")||{}).value);
