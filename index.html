@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026o";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026p";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -975,6 +975,15 @@ function dugmeViseZona(){
 /* Razlaganje razlike u pozicije. Mrtvo vreme (pauza, prazan hod, spremanje, kasnjenje)
    stoji u fondu i kosta po trazenom ucinku; visak tempa u samim nalozima to placa.
    Zbir ta dva daje tacno stvarni manjak ili visak. */
+/* srpski padez uz broj */
+function pozAkuz(n){ n=Math.abs(Math.round(n)); var d=n%10, dd=n%100;
+  if(d===1 && dd!==11) return "poziciju";
+  if(d>=2 && d<=4 && (dd<12||dd>14)) return "pozicije";
+  return "pozicija"; }
+function pozNom(n){ n=Math.abs(Math.round(n)); var d=n%10, dd=n%100;
+  return (d>=2 && d<=4 && (dd<12||dd>14)) ? "pozicije" : "pozicija"; }
+function pozGen(n){ n=Math.abs(Math.round(n)); var d=n%10, dd=n%100;
+  return (d>=1 && d<=4 && (dd<11||dd>14)) ? "pozicije" : "pozicija"; }
 function presek(sm, o){
   if(!o.meri || o.trazeni==null) return null;
   var kasn = sm.kasnjenje||0;
@@ -1009,8 +1018,34 @@ function presek(sm, o){
     if(!slaba || d.odst<slaba.odst) slaba={zona:z, odst:d.odst, poz:d.poz, min:d.min};
     if(!jaka  || d.odst>jaka.odst)  jaka ={zona:z, odst:d.odst, poz:d.poz, min:d.min};
   }
+  /* najskuplja stavka mrtvog vremena, obi\u010dnim re\u010dima */
+  var imena = {"Pauza":"pauza", "Prazan hod":"hodanje izme\u0111u naloga",
+               "Odlaganje opreme":"spremanje opreme na kraju",
+               "Ka\u0161njenje u smenu":"ka\u0161njenje na po\u010detku"};
+  var naj=null, spisak=[];
+  for(i=0;i<stavke.length;i++){
+    spisak.push(imena[stavke[i].ime] || stavke[i].ime.toLowerCase());
+    if(!naj || stavke[i].poz < naj.poz) naj = stavke[i];
+  }
+  var saldoP = (o.ostvareni-o.trazeni)*o.ukMin/60;
+  var recenice = [];
+  if(nalTempo!=null && nalTempo>o.trazeni)
+    recenice.push("Dok si bio u nalozima, brao si <b>br\u017ee nego \u0161to norma tra\u017ei</b>. "
+      + "To ti je donelo <b>"+cel(visak)+"</b> "+pozAkuz(visak)+" vi\u0161e.");
+  else
+    recenice.push("Dok si bio u nalozima, brao si <b>sporije nego \u0161to norma tra\u017ei</b>, "
+      + "pa nema vi\u0161ka koji bi pokrio vreme provedeno bez branja.");
+  if(mrtvo>=1)
+    recenice.push("<b>"+cel(mrtvo)+" minuta</b> si proveo bez branja \u2014 "+spisak.join(", ")
+      + ". Za to vreme norma od tebe tra\u017ei <b>"+cel(uPoz(mrtvo))+"</b> "+pozAkuz(uPoz(mrtvo))+".");
+  recenice.push(saldoP>=0
+    ? "Na kraju je <b>vi\u0161ak od "+cel(saldoP)+" "+pozGen(saldoP)+"</b>, to jest "+pct(o.razlika)+"."
+    : "Na kraju je <b>manjak od "+cel(-saldoP)+" "+pozGen(saldoP)+"</b>, to jest "+pct(o.razlika)+".");
+  if(naj && naj.poz<0)
+    recenice.push("Najskuplja stavka: <b>"+(imena[naj.ime]||naj.ime.toLowerCase())+"</b> \u2014 "
+      + cel(naj.min)+" min, to je "+cel(-naj.poz)+" "+pozNom(-naj.poz)+".");
   return {stavke:stavke, mrtvo:mrtvo, visak:visak, cena:uPoz(mrtvo),
-          nalMin:nalMin, nalTempo:nalTempo,
+          nalMin:nalMin, nalTempo:nalTempo, recenice:recenice,
           saldo:(o.ostvareni-o.trazeni)*o.ukMin/60,
           slaba:slaba, jaka:jaka, najduzi:najduzi};
 }
@@ -2366,7 +2401,39 @@ function ovSheet(){
         h += '<div class="tiny muted" style="margin-bottom:8px">Nalog u toku se ovde ne ra\u010duna \u2014 '
           +  'tek kad ga zatvori\u0161 u\u0111e u presek.</div>';
 
-      h += '<div class="card" style="margin-top:10px"><div class="lbl" style="color:var(--good)">\u0160ta ti donosi</div>';
+      /* prostim re\u010dima */
+      h += '<div class="card" style="margin-top:10px"><div class="lbl">Prostim re\u010dima</div>';
+      for(pi=0;pi<pr.recenice.length;pi++)
+        h += '<div style="margin-top:7px;line-height:1.5">'+pr.recenice[pi]+'</div>';
+      h += '</div>';
+
+      /* dve trake, da se odnos vidi bez \u010ditanja brojeva */
+      var naj2 = Math.max(pr.visak, pr.cena, 1);
+      h += '<div class="card"><div class="lbl">Zarada i tro\u0161ak</div>'
+        +  '<div style="margin-top:10px">'
+        +   '<div class="tiny muted">zaradio brzinom u nalozima</div>'
+        +   '<div class="row" style="gap:8px;align-items:center;margin-top:3px">'
+        +    '<div style="flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden">'
+        +     '<div style="height:100%;width:'+Math.round(Math.max(0,pr.visak)/naj2*100)+'%;'
+        +     'background:var(--good);border-radius:7px"></div></div>'
+        +    '<div class="num" style="width:54px;text-align:right;font-weight:700;color:var(--good)">+'
+        +     cel(Math.max(0,pr.visak))+'</div></div>'
+        +  '</div>'
+        +  '<div style="margin-top:10px">'
+        +   '<div class="tiny muted">potro\u0161io na vreme bez branja</div>'
+        +   '<div class="row" style="gap:8px;align-items:center;margin-top:3px">'
+        +    '<div style="flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden">'
+        +     '<div style="height:100%;width:'+Math.round(pr.cena/naj2*100)+'%;'
+        +     'background:var(--bad);border-radius:7px"></div></div>'
+        +    '<div class="num" style="width:54px;text-align:right;font-weight:700;color:var(--bad)">\u2212'
+        +     cel(pr.cena)+'</div></div>'
+        +  '</div>'
+        +  '<div class="tiny muted" style="margin-top:9px">'
+        +   (pr.visak>=pr.cena ? 'Zelena traka je du\u017ea \u2014 pokrio si sve i ostalo ti je vi\u0161ka.'
+                               : 'Crvena traka je du\u017ea \u2014 toliko ti je nedostajalo da pokrije\u0161 stajanje.')
+        +  '</div></div>';
+
+      h += '<div class="card"><div class="lbl" style="color:var(--good)">\u0160ta ti donosi</div>';
       if(pr.nalTempo!=null && pr.visak>0)
         h += '<div class="row" style="margin-top:6px;align-items:baseline">'
           +   '<div><b>Tempo u nalozima</b><div class="tiny muted">'+br(pr.nalTempo,0)+' poz/h \u00b7 '
