@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F7F6F3">
+<title>Tempo smene</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: jedna kolona kao tehnicko uputstvo — traka sa imenom, pa odeljci koji se citaju redom */
+:root{
+  --bg:#F7F6F3; --surface:#FFFFFF; --surface2:#F0EDE7; --line:#E3DED5;
+  --ink:#1A1713; --muted:#6B6358; --accent:#A66200; --accent-soft:#FBEDD2;
+  --good:#0A6440; --good-soft:#DCEDE4; --bad:#A3290F; --bad-soft:#F7DED6;
+  --disp:"IBM Plex Sans Condensed",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16130F; --surface:#1E1A15; --surface2:#262118; --line:#352E25;
+    --ink:#F0EBE3; --muted:#A79C8C; --accent:#F7A81B; --accent-soft:#3A2C0E;
+    --good:#4BCF8E; --good-soft:#14301F; --bad:#FF8168; --bad-soft:#3A1712;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16130F; --surface:#1E1A15; --surface2:#262118; --line:#352E25;
+  --ink:#F0EBE3; --muted:#A79C8C; --accent:#F7A81B; --accent-soft:#3A2C0E;
+  --good:#4BCF8E; --good-soft:#14301F; --bad:#FF8168; --bad-soft:#3A1712;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--body);
+     font-size:16px; line-height:1.6; margin:0}
+.wrap{max-width:46rem; margin:0 auto;
+      padding-left:max(16px, env(safe-area-inset-left, 0px));
+      padding-right:max(16px, env(safe-area-inset-right, 0px));
+      padding-block:0 3.5rem}
+h1,h2,h3{font-family:var(--disp); text-wrap:balance; margin:0; line-height:1.15}
+h1{font-size:clamp(2.1rem,8vw,3.1rem); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(1.35rem,5vw,1.7rem); font-weight:700; letter-spacing:-.01em}
+h3{font-size:1.02rem; font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+strong{font-weight:600}
+
+.eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:.14em;
+         text-transform:uppercase; color:var(--muted)}
+
+/* zaglavlje */
+header{border-bottom:1px solid var(--line); padding-block:2.6rem 2rem;
+       display:flex; flex-direction:column; gap:1rem}
+.mark{display:flex; align-items:center; gap:.65rem}
+.mark .sq{width:2.1rem; height:2.1rem; border-radius:.55rem; background:var(--accent);
+          color:var(--bg); font-family:var(--disp); font-weight:700; font-size:1.2rem;
+          display:grid; place-items:center; flex:none}
+.mark .nm{font-family:var(--mono); font-size:.78rem; letter-spacing:.1em;
+          text-transform:uppercase; color:var(--muted)}
+.lede{font-size:1.1rem; color:var(--muted); max-width:34rem}
+
+section{padding-block:2.4rem; border-bottom:1px solid var(--line);
+        display:flex; flex-direction:column; gap:1rem}
+section:last-of-type{border-bottom:0}
+.shead{display:flex; flex-direction:column; gap:.3rem}
+
+/* kartica */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:.7rem;
+      padding:1.05rem 1.1rem; display:flex; flex-direction:column; gap:.6rem}
+.card .ttl{font-family:var(--disp); font-weight:600; font-size:1.02rem}
+
+/* koraci — ovde je redosled stvarna informacija */
+ol.steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.75rem;
+         counter-reset:k}
+ol.steps li{counter-increment:k; display:grid; grid-template-columns:1.8rem 1fr; gap:.8rem;
+            align-items:start}
+ol.steps li::before{content:counter(k); font-family:var(--mono); font-size:.8rem; font-weight:600;
+                    color:var(--accent); background:var(--accent-soft);
+                    width:1.8rem; height:1.8rem; border-radius:.45rem;
+                    display:grid; place-items:center}
+ol.steps .t{font-weight:600}
+ol.steps .d{color:var(--muted); font-size:.94rem}
+
+ul.plain{margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:.45rem}
+ul.plain li{padding-left:.15rem}
+
+/* tabela */
+.tw{overflow-x:auto; border:1px solid var(--line); border-radius:.7rem; background:var(--surface)}
+table{border-collapse:collapse; width:100%; min-width:21rem; font-size:.9rem}
+th,td{padding:.55rem .7rem; text-align:right; white-space:nowrap;
+      border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--mono); font-size:.67rem; letter-spacing:.09em; text-transform:uppercase;
+         color:var(--muted); font-weight:400; background:var(--surface2)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.tot td{font-weight:600; background:var(--surface2)}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+
+/* racun */
+.calc{background:var(--surface2); border-radius:.7rem; padding:1rem 1.1rem;
+      font-family:var(--mono); font-size:.86rem; line-height:1.85;
+      overflow-x:auto; white-space:pre; color:var(--ink)}
+
+/* dve kolone za pojmove */
+.defs{display:grid; gap:.7rem}
+@media (min-width:34rem){ .defs{grid-template-columns:1fr 1fr} }
+.def{background:var(--surface); border:1px solid var(--line); border-radius:.6rem;
+     padding:.8rem .9rem; display:flex; flex-direction:column; gap:.25rem; min-width:0}
+.def .k{font-family:var(--mono); font-size:.78rem; color:var(--accent); font-weight:600}
+.def .v{font-size:.92rem; color:var(--muted)}
+
+/* istaknuti red */
+.note{border-left:3px solid var(--accent); background:var(--accent-soft);
+      padding:.8rem .95rem; border-radius:0 .5rem .5rem 0; font-size:.95rem}
+.note.warn{border-left-color:var(--bad); background:var(--bad-soft)}
+
+.tiles{display:grid; gap:.6rem; grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr))}
+.tile{background:var(--surface); border:1px solid var(--line); border-radius:.6rem;
+      padding:.75rem .85rem; display:flex; flex-direction:column; gap:.15rem; min-width:0}
+.tile .n{font-family:var(--mono); font-size:1.4rem; font-weight:600; line-height:1.1}
+.tile .l{font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+         color:var(--muted)}
+.tile .s{font-size:.82rem; color:var(--muted)}
+
+footer{padding-block:2rem; color:var(--muted); font-size:.88rem;
+       display:flex; flex-direction:column; gap:.5rem}
+code{font-family:var(--mono); font-size:.88em; background:var(--surface2);
+     padding:.1em .35em; border-radius:.25rem}
+</style>
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;padding:0}
+img{max-width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="mark">
+    <div class="sq">T</div>
+    <div class="nm">Tempo smene &middot; komisioniranje</div>
+  </div>
+  <h1>Koliko stvarno radiš, dok još možeš nešto da promeniš</h1>
+  <p class="lede">Aplikacija za telefon koja meri učinak komisioniranja po istoj računici
+     po kojoj to radi i magacin. Zvanični izveštaj stiže jednom mesečno, sa nekoliko nedelja
+     zakašnjenja. Ovo ti isti broj pokazuje tokom smene.</p>
+  <div class="tiles">
+    <div class="tile"><span class="l">Provereno na</span><span class="n">3</span>
+      <span class="s">meseca zvaničnih izveštaja</span></div>
+    <div class="tile"><span class="l">Odstupanje</span><span class="n">0,2</span>
+      <span class="s">poena na mesec, u najgorem slučaju</span></div>
+    <div class="tile"><span class="l">Unos po nalogu</span><span class="n">3</span>
+      <span class="s">dodira, ostalo meri sama</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Problem</span>
+    <h2>Broj stigne kad je kasno</h2>
+  </div>
+  <p>Komisionar dobija papir sa učinkom jednom mesečno. Na njemu piše koliko je pozicija
+     uzeo, koliko minuta je radio i da li je bio iznad ili ispod tražene norme. Papir je tačan,
+     ali stiže posle. Dok ga dobiješ, mesec je završen i više se ništa ne može popraviti.</p>
+  <p>Tokom smene čovek nema pojma gde stoji. Oseti da je dan bio težak, ali ne zna da li je to
+     deset pozicija ispod norme ili sto. Ne zna ni šta ga je koštalo — da li male narudžbine,
+     šetnja između naloga, ili čekanje dopune.</p>
+  <div class="note">Ova aplikacija računa isti broj kao magacin, samo odmah. Tokom smene vidiš
+     koliko ti nedostaje do nule, a posle smene tačno gde su minuti otišli.</div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Osnovni pojmovi</span>
+    <h2>Rečnik, u četiri reda</h2>
+  </div>
+  <div class="defs">
+    <div class="def"><span class="k">POZICIJA</span>
+      <span class="v">Jedan artikal sa jedne police. Nije komad — ako uzmeš šest kutija
+      iste robe sa iste police, to je jedna pozicija.</span></div>
+    <div class="def"><span class="k">ZONA</span>
+      <span class="v">Deo magacina. Hemija, Hrana, Kućni ljubimci i ostale. Svaka ima
+      svoju normu, jer se u nekoj bere brže nego u drugoj.</span></div>
+    <div class="def"><span class="k">NORMA</span>
+      <span class="v">Koliko pozicija na sat se očekuje u toj zoni. Hemija 81, Hrana 106,
+      Kućni ljubimci 76.</span></div>
+    <div class="def"><span class="k">NALOG</span>
+      <span class="v">Jedna narudžbina za jednu filijalu. Uzmeš je, obereš, predaš.
+      Ima svoju zonu, svoju filijalu i svoj broj pozicija.</span></div>
+  </div>
+  <p>Smena traje osam sati — prva 06:00–14:00, druga 14:00–22:00. To je <strong>480 minuta
+     fonda</strong>. Od tog fonda se odbija samo jedno: vreme koje si proveo čekajući dopunu
+     prazne police. Pauza, šetnja između naloga i spremanje opreme ostaju unutra i broje se
+     kao radno vreme.</p>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Računica</span>
+    <h2>Kako magacin meri učinak</h2>
+  </div>
+  <p>Računica ima tri koraka i nijedan nije očigledan. Zato je većina ljudi ne razume, pa
+     ne zna ni na čemu gubi.</p>
+
+  <h3>1. Ostvareni učinak — koliko si stvarno brao</h3>
+  <div class="calc">sve pozicije &divide; svi minuti &times; 60</div>
+  <p>Prosto: koliko pozicija na sat. Minuti su fond smene minus čekanje na dopunu.</p>
+
+  <h3>2. Traženi učinak — koliko se od tebe tražilo</h3>
+  <p>Ovo je mesto gde se najviše greši. Traženi učinak <strong>nije prosek normi</strong>
+     zona u kojima si radio. On se računa preko vremena: za svaku zonu se izračuna koliko bi ti
+     vremena <em>sledovalo</em> po normi, pa se sve tvoje pozicije podele tim zbirom.</p>
+  <div class="calc">sve pozicije &divide; ( poz&#8321;&divide;norma&#8321; + poz&#8322;&divide;norma&#8322; + &hellip; ) &times; 60</div>
+  <p>Posledica: sat proveden u zoni sa niskom normom diže tvoju letvicu, a sat u zoni sa
+     visokom je spušta. Letvica ti se menja svakog dana, u zavisnosti od toga gde su te
+     rasporedili.</p>
+
+  <h3>3. Razlika — jesi li iznad ili ispod</h3>
+  <div class="calc">traženo vreme &divide; stvarno vreme &minus; 1</div>
+
+  <h3>Na primeru jedne smene</h3>
+  <p>Smena od osam sati, u njoj sat vremena čekanja dopune. Ostaje 420 minuta fonda.
+     Radilo se u dve zone:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Zona</th><th>Minuti</th><th>Pozicije</th><th>Ostvareno</th><th>Norma</th><th>Odst.</th></tr></thead>
+    <tbody>
+      <tr><td>F6 Hemija</td><td class="num">240</td><td class="num">300</td><td class="num">75</td><td class="num">81</td><td class="num neg">&minus;7%</td></tr>
+      <tr><td>F7 Hrana</td><td class="num">180</td><td class="num">330</td><td class="num">110</td><td class="num">106</td><td class="num pos">+4%</td></tr>
+      <tr class="tot"><td>Ukupno</td><td class="num">420</td><td class="num">630</td><td class="num">90,0</td><td class="num">92,4</td><td class="num neg">&minus;2,6%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="calc">ostvareni   630 &divide; 420 &times; 60 = 90,0
+
+traženo     300&divide;81 + 330&divide;106 = 6,82 h = 409 min
+traženi     630 &divide; 6,82 = 92,4
+
+razlika     409 &divide; 420 &minus; 1 = &minus;2,6%</div>
+  <p>Obrati pažnju na jednu stvar: u Hrani je dan bio iznad norme, a ukupan rezultat je ipak
+     u minusu. Letvicu diže zona sa višom normom čim se u njoj uzme više pozicija. Zato
+     se zbir odstupanja po zonama ne sabira u ukupno odstupanje — vreme ih ponderiše.</p>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Upotreba</span>
+    <h2>Kako izgleda jedna smena</h2>
+  </div>
+  <p>Cilj je da aplikacija ne oduzima vreme na poslu. Tokom rada se samo dodiruju dugmad;
+     vreme se hvata samo, a sav obračun ide posle.</p>
+  <ol class="steps">
+    <li><div><div class="t">Izabereš zonu i pritisneš START</div>
+      <div class="d">Dok ne pritisneš, ništa ne teče. Ako si zakasnio, upišeš koliko —
+      ti minuti ulaze u fond, kao i kod njih.</div></div></li>
+    <li><div><div class="t">Uzmeš nalog</div>
+      <div class="d">Upišeš šifru filijale. Aplikacija odmah kaže kako se pakuje, pa upišeš
+      broj stavki. Od tog trenutka teče vreme naloga.</div></div></li>
+    <li><div><div class="t">Ako staneš na praznoj poziciji — ČEKANJE</div>
+      <div class="d">Upišeš šifru pozicije u obliku <code>240-190-02</code>. Nalog ostaje
+      otvoren, jer se dopuna čeka usred naloga. Kad roba stigne — NASTAVI.</div></div></li>
+    <li><div><div class="t">Predaš nalog</div>
+      <div class="d">Jedan dodir. Odmah vidiš koliko si bio iznad ili ispod norme na tom
+      nalogu. Od tada do sledećeg naloga teče prazan hod.</div></div></li>
+    <li><div><div class="t">Pauza, pa nazad</div>
+      <div class="d">Fond je 60 minuta, može iz više delova. Aplikacija broji koliko ti je
+      ostalo i javlja ako pređeš.</div></div></li>
+    <li><div><div class="t">Završiš smenu</div>
+      <div class="d">Ako si stao pre kraja, biraš da li se računa do zvaničnog kraja smene.
+      Ako zaboraviš da zatvoriš, zatvori se sama.</div></div></li>
+  </ol>
+  <div class="note">Dok smena traje, na vrhu stoji jedan broj: <strong>koliko procenata norme
+     moraš držati do kraja smene</strong> da izađeš na nulu. Taj broj ne zavisi od toga u kojoj
+     si zoni — važi u bilo kojoj kombinaciji.</div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Pakovanje</span>
+    <h2>Šifra filijale, pa odgovor</h2>
+  </div>
+  <p>Pogrešno spakovan nalog je vraćanje i gubitak vremena, a pravilo se pamti napamet za
+     stotinak filijala. Aplikacija drži spisak i odgovara u jednom ekranu:</p>
+  <div class="card">
+    <div class="ttl">FILIJALA J037</div>
+    <div class="calc" style="background:transparent;padding:0;font-size:1.05rem;line-height:1.5">PALLY
+<span style="color:var(--good)">OBAVEZNO SVE U KAŠETE</span></div>
+  </div>
+  <ul class="plain">
+    <li>Sve filijale idu na <strong>pally</strong>.</li>
+    <li>Filijale sa spiska (40 šifara) pakuju se <strong>obavezno sve u kašete</strong>.</li>
+    <li>Četiri od njih nose i <strong>4 u visinu</strong>.</li>
+    <li>Jedan jedini izuzetak je online nalog — on ide na europaletu.</li>
+  </ul>
+  <p>Spisak poznatih šifara ima 105 stavki i menja se iz same aplikacije kad magacin izda nov
+     papir. Unos prašta greške koje se najlakše naprave na tastaturi: slovo O umesto nule,
+     slovo I umesto jedinice, ćirilično slovo. Ako upišeš <code>JO4B</code>, aplikacija
+     prepozna <code>J04B</code> i crvenim slovima kaže šta je ispravila.</p>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Ekrani</span>
+    <h2>Četiri kartice</h2>
+  </div>
+  <div class="defs">
+    <div class="def"><span class="k">SMENA</span>
+      <span class="v">Ono što gledaš dok radiš. Koliko ti nedostaje do nule, koliko traje
+      otvoreni nalog, koliko je ostalo pauze.</span></div>
+    <div class="def"><span class="k">DAN</span>
+      <span class="v">Gotova smena, razložena: tabela po zonama, svi nalozi sa rezultatom,
+      spisak čekanja za prijavu i ceo tok dana red po red.</span></div>
+    <div class="def"><span class="k">MESEC</span>
+      <span class="v">Isti obračun nad celim mesecom, plus ono što se vidi tek na gomili
+      dana: prazan hod, kašnjenja, najskuplje pozicije.</span></div>
+    <div class="def"><span class="k">NORME</span>
+      <span class="v">Norme po zonama, radno vreme smena, spisak filijala i kopija svih
+      podataka.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Ispravke</span>
+    <h2>Kad nešto krene naopako</h2>
+  </div>
+  <p>Telefon se isprazni, nalog ostane otvoren, zaboraviš da završiš pauzu, ceo deo smene
+     provedeš u zoni koju nisi prijavio. Sve se ispravlja na jednom mestu — u
+     <strong>Toku dana</strong>, gde stoji spisak svega što se desilo:</p>
+  <div class="calc">14:53  uzet nalog
+15:08  čekanje počelo &middot; pozicija 231-670-00
+15:20  nastavak rada
+15:22  nalog završen &middot; 35 pozicija
+15:23  zona &rarr; F7</div>
+  <ul class="plain">
+    <li>Dodirneš red i ispraviš vreme, broj stavki, zonu ili šifru pozicije.</li>
+    <li>Brisanje skida ceo par — obrišeš pauzu i nestaju i početak i kraj.</li>
+    <li>Nalog koji je ostao otvoren zatvoriš iz njegovog reda.</li>
+    <li>Dodaješ ono što nedostaje: nalog, promenu zone, pauzu, čekanje, ili vreme provedeno
+        na drugom radnom mestu.</li>
+  </ul>
+  <p>Aplikacija ne prima unos koji nema smisla i kaže zašto: „Kraj mora biti posle 16:41",
+     „Preklapa se sa nalogom 20:43–21:31", „Mora biti u smeni 14:00–22:00".</p>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Šta se vidi iz podataka</span>
+    <h2>Gde minuti stvarno odlaze</h2>
+  </div>
+  <p>Kad se sakupi mesec dana, pokazuje se nekoliko stvari koje se iz glave ne mogu izračunati.</p>
+  <h3>Prazan hod</h3>
+  <p>Vreme od predaje jednog naloga do uzimanja sledećeg. Broji se u normu, a ne donosi nijednu
+     poziciju. Na mesec dana to ume da bude trinaest sati. Aplikacija ga meri po zastoju, pamti
+     najduže i računa koliko bi pozicija bilo da si to vreme bio u nalogu.</p>
+  <h3>Veličina naloga</h3>
+  <p>Mali nalozi se rade u gubitku, jer se po pozicijama ide više kutija i više koraka.
+     Aplikacija po mesecu razvrsta naloge po veličini i pokaže od koje veličine naviše
+     počinješ da vraćaš vreme.</p>
+  <h3>Kašnjenje</h3>
+  <p>Minuti kašnjenja ulaze u fond i ne vraćaju ništa. Šest minuta dnevno kroz mesec je
+     oko sto devedeset propuštenih pozicija.</p>
+  <div class="note">Poenta nije da se radi brže, nego da se vidi šta tačno odnosi razliku.
+     U nalozima se po pravilu drži tempo iznad norme; minus nastaje između naloga.</div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Provera</span>
+    <h2>Da li se slaže sa papirom</h2>
+  </div>
+  <p>Računica nije pretpostavljena nego izvedena iz zvaničnih mesečnih izveštaja, i zatim
+     proverena na tri uzastopna meseca. U svakom su uzeti brojevi sa papira — minuti i
+     pozicije po zonama — i provučeni kroz aplikaciju.</p>
+  <p>U sva tri meseca aplikacija vraća <strong>isti rezultat kao papir, do decimale</strong>:
+     isti ostvareni učinak, isti traženi, isto odstupanje, i ista odstupanja po svakoj zoni
+     posebno.</p>
+  <p>Poređeno je i obrnuto — sopstvena evidencija vođena tokom smene prema izveštaju za
+     isti period. Tu je razlika bila dve desetine procenta, i to zbog jednog čekanja koje
+     nije priznato i nekoliko pozicija koje nisu bile upisane. Sama računica se nije
+     razišla ni u jednom slučaju.</p>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Podaci</span>
+    <h2>Gde sve ovo stoji</h2>
+  </div>
+  <ul class="plain">
+    <li>Sve ostaje <strong>u samom telefonu</strong>. Nema naloga, nema prijave, nema servera.</li>
+    <li>Niko drugi ne vidi te podatke — ni poslodavac, ni onaj ko je aplikaciju napravio.</li>
+    <li>Radi i bez interneta. Otvori se u pregledaču i doda na početni ekran, pa se ponaša
+        kao svaka druga aplikacija.</li>
+    <li>U kartici Norme stoji kopija svih podataka kao tekst — prekopira se na sigurno mesto
+        i vrati nazad ako se telefon promeni.</li>
+  </ul>
+  <div class="note warn">Pošto podaci žive samo u telefonu, brisanje podataka pregledača
+     briše i evidenciju. Zato kopiju treba povremeno negde sačuvati.</div>
+</section>
+
+<section>
+  <div class="shead">
+    <span class="eyebrow">Početak</span>
+    <h2>Kako se pokreće</h2>
+  </div>
+  <ol class="steps">
+    <li><div><div class="t">Otvoriš link u pregledaču na telefonu</div>
+      <div class="d"><a href="https://astroariesstudio-sys.github.io/tempo/">astroariesstudio-sys.github.io/tempo</a></div></div></li>
+    <li><div><div class="t">Dodaš na početni ekran</div>
+      <div class="d">Meni pregledača &rarr; Dodaj na početni ekran. Posle radi kao aplikacija,
+      i bez interneta.</div></div></li>
+    <li><div><div class="t">Proveriš norme</div>
+      <div class="d">U kartici Norme stoje norme po zonama i radno vreme smena. Ako se kod
+      tebe razlikuju, ispraviš ih jednom i to je to.</div></div></li>
+    <li><div><div class="t">Prva smena</div>
+      <div class="d">Izabereš zonu, START, i radiš kao i inače. Sve ostalo aplikacija hvata
+      sama.</div></div></li>
+  </ol>
+</section>
+
+<footer>
+  <p>Tempo smene &middot; lična evidencija učinka komisioniranja</p>
+  <p>Računica je izvedena iz zvaničnih mesečnih izveštaja i proverena na njima.
+     Aplikacija ne komunicira ni sa jednim sistemom poslodavca i nije zvanična evidencija —
+     služi da čovek tokom smene zna gde stoji.</p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026d";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026e";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -1898,6 +1898,15 @@ function viewMesec(){
 /* ---- NORME ---- */
 function viewNorme(){
   var h='<div class="stack">', si;
+
+  h += '<a href="vodic.html" target="_blank" rel="noopener" class="card" '
+    +  'style="text-decoration:none;color:inherit;display:flex;flex-direction:row;'
+    +  'align-items:center;gap:12px">'
+    +  '<span style="font-size:22px;line-height:1">\u2139</span>'
+    +  '<span style="flex:1"><span class="lbl" style="display:block">Uputstvo</span>'
+    +  '<span class="tiny muted">Kako se ra\u010duna u\u010dinak i kako se aplikacija koristi \u2014 '
+    +  'cela pri\u010da na jednoj strani.</span></span>'
+    +  '<span style="color:var(--accent);font-size:20px">\u203a</span></a>';
 
   h += '<div class="card"><div class="lbl">Smene</div>'
     +  '<div class="tiny muted" style="margin:4px 0 2px">Zvanično radno vreme. Obračun uvek teče od početka smene, '
