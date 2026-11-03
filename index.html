@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026h";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026i";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -386,7 +386,7 @@ var tab = "smena", sheet = null, keypad = null, saveErr = false,
     mesecIzbor = null, smenaIzbor = null, danIzbor = null, zonaIzbor = null,
     pitanje = null, tekstZaPrikaz = null, vremenaZa = null,
     filGrupa = null, filijalaZaNalog = null, zonaNalogId = null, zonaNalogNazad = null,
-    redIzbor = null, dodajTip = "nalog", dodajZona = null;
+    redIzbor = null, dodajTip = "nalog", dodajZona = null, sveZone = false;
 
 /* Sopstvena potvrda — sistemski prozor (confirm) je u aplikaciji blokiran,
    pa bi svako brisanje tiho prošlo bez ikakvog dejstva. */
@@ -961,6 +961,18 @@ function preveziSve(sm){
     if(e.tip==="nalog" && e.t<=z[0].t) e.zona=z[0].zona;
   }
   for(i=0;i<z.length;i++) preveziNaloge(sm, z[i].t, z[i].zona);
+}
+/* Spisak zona za izbor: podrazumevano samo one u kojima se radi, a na "+ zona"
+   i sve ostale iz spiska normi. Tekuca zona je uvek u spisku. */
+function zoneZaIzbor(tekuca){
+  var a = [], z;
+  if(sveZone){ for(z in S.norme) a.push(z); }
+  else a = S.aktivne.slice();
+  if(tekuca && a.indexOf(tekuca)<0) a.push(tekuca);
+  return a;
+}
+function dugmeViseZona(){
+  return sveZone ? "" : '<button class="zmore" data-act="vise-zona">+ zona</button>';
 }
 function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"||tip==="drugi"; }
 /* Kad se dodirne zona ili vrsta unosa, kartica se iscrtava ponovo i polja bi ostala prazna.
@@ -2173,14 +2185,14 @@ function ovSheet(){
         h += '<div class="f"><label>Pozicija</label><input type="text" id="rKod" '
           +   'value="'+esc(r2.kod||"")+'" placeholder="240-190-02" style="width:150px"></div>';
       if(r2.tip==="zona"){
-        var zl4=S.aktivne.slice(), zq;
-        if(zl4.indexOf(r2.zona)<0) zl4.push(r2.zona);
+        var zl4=zoneZaIzbor(r2.zona), zq;
         h += '<div class="lbl" style="margin-top:12px">Zona</div><div class="zones">';
         for(zq=0;zq<zl4.length;zq++)
           h += '<button class="z'+(zl4[zq]===r2.zona?" on":"")+'" data-act="red-zona" data-z="'+zl4[zq]+'">'
             +  '<span class="k">'+zl4[zq]+'</span>'
-            +  (imeZone(zl4[zq]) ? '<span class="v" style="opacity:.8">'+imeZone(zl4[zq])+'</span>' : '')+'</button>';
-        h += '</div>';
+            +  (imeZone(zl4[zq]) ? '<span class="v" style="opacity:.8">'+imeZone(zl4[zq])+'</span>' : '')
+            +  '<span class="v">norma '+(S.norme[zl4[zq]]||"?")+'</span></button>';
+        h += dugmeViseZona()+'</div>';
       }
       if(r2.tip==="nalog_poc" && rp<0)
         h += '<div class="card" style="border-color:var(--bad);margin-top:14px">'
@@ -2224,7 +2236,7 @@ function ovSheet(){
           +  '<div class="f"><label>Stavki</label><input type="number" id="dPoz" inputmode="numeric" style="width:96px"></div>';
       }
       if(dodajTip==="zona"){
-        var zl6=S.aktivne.slice(), ze;
+        var zl6=zoneZaIzbor(null), ze;
         if(!dodajZona || zl6.indexOf(dodajZona)<0) dodajZona=zl6[0];
         h += '<div class="lbl">Od tog trenutka radim u zoni</div><div class="zones">';
         for(ze=0;ze<zl6.length;ze++)
@@ -2232,7 +2244,7 @@ function ovSheet(){
             +  '<span class="k">'+zl6[ze]+'</span>'
             +  (imeZone(zl6[ze]) ? '<span class="v" style="opacity:.8">'+imeZone(zl6[ze])+'</span>' : '')
             +  '<span class="v">norma '+(S.norme[zl6[ze]]||"\u2014")+'</span></button>';
-        h += '</div><div class="tiny muted" style="margin:8px 2px 0">Va\u017ei do slede\u0107e promene zone. '
+        h += dugmeViseZona()+'</div><div class="tiny muted" style="margin:8px 2px 0">Va\u017ei do slede\u0107e promene zone. '
           +  'Nalozi zavr\u0161eni u tom vremenu prelaze u ovu zonu zajedno sa pozicijama.</div>';
       }
       if(dodajTip==="cekanje")
@@ -2248,12 +2260,12 @@ function ovSheet(){
     }
 
   } else if(sheet==="zona-naloga"){
-    var smn=smenaPoUnosu(zonaNalogId), zn0=null, zj2, zl3=S.aktivne.slice();
+    var smn=smenaPoUnosu(zonaNalogId), zn0=null, zj2, zl3;
     if(smn){
       for(zj2=0;zj2<smn.dogadjaji.length;zj2++)
         if(smn.dogadjaji[zj2].id===zonaNalogId){ zn0=trenutnaZonaDo(smn, smn.dogadjaji[zj2].t); break; }
     }
-    if(zn0 && zl3.indexOf(zn0)<0) zl3.push(zn0);
+    zl3 = zoneZaIzbor(zn0);
     h += '<div class="lbl">U kojoj zoni je bio ovaj nalog</div>'
       +  '<div class="tiny muted" style="margin:5px 0 10px">Menja se samo ovaj nalog — od uzimanja do predaje. '
       +  'Nalozi pre i posle ostaju gde jesu, a pozicije prate zonu.</div><div class="zones">';
@@ -2262,10 +2274,10 @@ function ovSheet(){
         +  '<span class="k">'+zl3[zj2]+'</span>'
         +  (imeZone(zl3[zj2]) ? '<span class="v" style="opacity:.8">'+imeZone(zl3[zj2])+'</span>' : '')
         +  '<span class="v">norma '+(S.norme[zl3[zj2]]||"—")+'</span></button>';
-    h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zona-naloga-odustani">Odustani</button>';
+    h += dugmeViseZona()+'</div>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zona-naloga-odustani">Odustani</button>';
   } else if(sheet==="zona-pocetak"){
-    var zl7=S.aktivne.slice(), zt7=trenutnaZona(S.smena), zk;
-    if(zt7 && zl7.indexOf(zt7)<0) zl7.push(zt7);
+    var zt7=trenutnaZona(S.smena), zl7=zoneZaIzbor(zt7), zk;
     h += '<div class="lbl">U kojoj zoni je ovaj nalog</div>'
       +  '<div class="tiny muted" style="margin:5px 0 10px">Potvrdi zonu pre nego \u0161to nalog krene. '
       +  'Ozna\u010dena je ona u kojoj si bio \u2014 ako se nije promenila, jedan dodir i dalje.</div>'
@@ -2275,21 +2287,21 @@ function ovSheet(){
         +  '<span class="k">'+zl7[zk]+'</span>'
         +  (imeZone(zl7[zk]) ? '<span class="v" style="opacity:.8">'+imeZone(zl7[zk])+'</span>' : '')
         +  '<span class="v">norma '+(S.norme[zl7[zk]]||"\u2014")+'</span></button>';
-    h += '</div>'
+    h += dugmeViseZona()+'</div>'
       +  '<button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
 
   } else if(sheet==="ispravi-zonu"){
     h += '<div class="lbl">U kojoj si zoni zapravo</div>'
       +  '<div class="tiny muted" style="margin:5px 0 10px">Ispravlja zonu unazad, od poslednje promene — '
       +  'za slučaj da si izabrao pogrešnu pa shvatio usred naloga.</div><div class="zones">';
-    var zl2=S.aktivne.slice(), zt=trenutnaZona(S.smena), zj;
-    if(zt && zl2.indexOf(zt)<0) zl2.push(zt);
+    var zt=trenutnaZona(S.smena), zl2=zoneZaIzbor(zt), zj;
     for(zj=0;zj<zl2.length;zj++)
       h += '<button class="z'+(zl2[zj]===zt?" on":"")+'" data-act="zona-ispravka" data-z="'+zl2[zj]+'">'
         +  '<span class="k">'+zl2[zj]+'</span>'
         +  (imeZone(zl2[zj]) ? '<span class="v" style="opacity:.8">'+imeZone(zl2[zj])+'</span>' : '')
         +  '<span class="v">norma '+(S.norme[zl2[zj]]||"—")+'</span></button>';
-    h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
+    h += dugmeViseZona()+'</div>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
 
   } else if(sheet==="kraj-smene"){
     var ks=S.smena, sd2=Date.now(), ostatak=Math.round((ks.kraj_plan-sd2)/60000);
@@ -2426,6 +2438,7 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="izbor-smene"){ smenaIzbor = parseInt(el.dataset.i,10); render(); return; }
+  if(a==="vise-zona"){ sveZone=true; iscrtajCuvajuci(); return; }
   if(a==="sve-zone"){ sheet="sve-zone"; render(); return; }
   if(a==="sve-zone-start"){ sheet="sve-zone"; render(); return; }
   if(a==="nalog"){
@@ -2433,7 +2446,7 @@ document.addEventListener("click", function(ev){
     if(!uNalogu(S.smena)){ poruka("Nisi u nalogu — dodirni POČNI NALOG"); return; }
     zavrsiNalog(); return;
   }
-  if(a==="pocni-nalog"){ filijalaZaNalog=null; sheet="zona-pocetak"; render(); return; }
+  if(a==="pocni-nalog"){ sveZone=false; filijalaZaNalog=null; sheet="zona-pocetak"; render(); return; }
   if(a==="fil-grupa"){ filGrupa=el.dataset.g; render(); return; }
   if(a==="fil-kod"){ filijalaZaNalog=el.dataset.k; sheet="pakovanje"; render(); return; }
   if(a==="fil-nema"){ filijalaZaNalog="—"; sheet="pakovanje"; render(); return; }
@@ -2474,11 +2487,11 @@ document.addEventListener("click", function(ev){
   }
   /* ---- rucne ispravke toka dana ---- */
   if(a==="red"){
-    poljaCuvar={};
+    sveZone=false; poljaCuvar={};
     redIzbor={p:parseInt(el.dataset.p,10), i:parseInt(el.dataset.i,10)};
     sheet="uredi-red"; render(); return;
   }
-  if(a==="red-odustani"){ poljaCuvar={}; redIzbor=null; sheet=null; render(); return; }
+  if(a==="red-odustani"){ sveZone=false; poljaCuvar={}; redIzbor=null; sheet=null; render(); return; }
   if(a==="red-zona"){
     var rz=redIzbor?smenaPoPocetku(redIzbor.p):null;
     if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; preveziSve(rz); save(); iscrtajCuvajuci(); }
@@ -2541,7 +2554,7 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="dodaj-red"){
-    poljaCuvar={};
+    sveZone=false; poljaCuvar={};
     redIzbor={p:parseInt(el.dataset.p,10), i:-1};
     dodajTip=el.dataset.t||"nalog"; dodajZona=null; sheet="dodaj-red"; render(); return;
   }
@@ -2623,12 +2636,13 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="zona-poc"){
+    sveZone=false;
     var zp=el.dataset.z;
     if(S.smena && trenutnaZona(S.smena)!==zp) promeniZonu(zp);
     sheet="filijala"; render(); return;
   }
   if(a==="nalog-zona"){
-    zonaNalogId=el.dataset.id; zonaNalogNazad=el.dataset.nazad||null;
+    sveZone=false; zonaNalogId=el.dataset.id; zonaNalogNazad=el.dataset.nazad||null;
     sheet="zona-naloga"; render(); return;
   }
   if(a==="zona-naloga-odustani"){
