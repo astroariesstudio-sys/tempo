@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026g";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026h";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -2263,6 +2263,21 @@ function ovSheet(){
         +  (imeZone(zl3[zj2]) ? '<span class="v" style="opacity:.8">'+imeZone(zl3[zj2])+'</span>' : '')
         +  '<span class="v">norma '+(S.norme[zl3[zj2]]||"—")+'</span></button>';
     h += '</div><button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zona-naloga-odustani">Odustani</button>';
+  } else if(sheet==="zona-pocetak"){
+    var zl7=S.aktivne.slice(), zt7=trenutnaZona(S.smena), zk;
+    if(zt7 && zl7.indexOf(zt7)<0) zl7.push(zt7);
+    h += '<div class="lbl">U kojoj zoni je ovaj nalog</div>'
+      +  '<div class="tiny muted" style="margin:5px 0 10px">Potvrdi zonu pre nego \u0161to nalog krene. '
+      +  'Ozna\u010dena je ona u kojoj si bio \u2014 ako se nije promenila, jedan dodir i dalje.</div>'
+      +  '<div class="zones">';
+    for(zk=0;zk<zl7.length;zk++)
+      h += '<button class="z'+(zl7[zk]===zt7?" on":"")+'" data-act="zona-poc" data-z="'+zl7[zk]+'">'
+        +  '<span class="k">'+zl7[zk]+'</span>'
+        +  (imeZone(zl7[zk]) ? '<span class="v" style="opacity:.8">'+imeZone(zl7[zk])+'</span>' : '')
+        +  '<span class="v">norma '+(S.norme[zl7[zk]]||"\u2014")+'</span></button>';
+    h += '</div>'
+      +  '<button class="btn ghost wide" style="margin-top:12px;min-height:46px" data-act="zatvori-ov">Odustani</button>';
+
   } else if(sheet==="ispravi-zonu"){
     h += '<div class="lbl">U kojoj si zoni zapravo</div>'
       +  '<div class="tiny muted" style="margin:5px 0 10px">Ispravlja zonu unazad, od poslednje promene — '
@@ -2418,7 +2433,7 @@ document.addEventListener("click", function(ev){
     if(!uNalogu(S.smena)){ poruka("Nisi u nalogu — dodirni POČNI NALOG"); return; }
     zavrsiNalog(); return;
   }
-  if(a==="pocni-nalog"){ filijalaZaNalog=null; sheet="filijala"; render(); return; }
+  if(a==="pocni-nalog"){ filijalaZaNalog=null; sheet="zona-pocetak"; render(); return; }
   if(a==="fil-grupa"){ filGrupa=el.dataset.g; render(); return; }
   if(a==="fil-kod"){ filijalaZaNalog=el.dataset.k; sheet="pakovanje"; render(); return; }
   if(a==="fil-nema"){ filijalaZaNalog="—"; sheet="pakovanje"; render(); return; }
@@ -2606,6 +2621,11 @@ document.addEventListener("click", function(ev){
     sm8.dogadjaji.sort(function(x,y){return x.t-y.t;});
     poljaCuvar={}; redIzbor=null; sheet=null; save(); render(); poruka(por8);
     return;
+  }
+  if(a==="zona-poc"){
+    var zp=el.dataset.z;
+    if(S.smena && trenutnaZona(S.smena)!==zp) promeniZonu(zp);
+    sheet="filijala"; render(); return;
   }
   if(a==="nalog-zona"){
     zonaNalogId=el.dataset.id; zonaNalogNazad=el.dataset.nazad||null;
