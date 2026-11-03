@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026i";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026j";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -1363,10 +1363,12 @@ function viewAktivna(){
       +    '<button data-act="ispravi-stavke" style="color:var(--accent);font:inherit;text-transform:none;letter-spacing:0">'
       +      nt.poz+' stavki ✎</button></div>'
       +   (nt.fil ? (function(){ var pv=pakovanje(nt.fil);
+             if(!pv) return '';
              return '<div class="tiny" style="margin:-2px 0 4px;font-weight:700;color:'
                + (pv.vrsta==="kasete"?"var(--good)":(pv.vrsta==="ep"?"var(--muted)":"var(--accent)"))+'">'
-               + esc(nt.fil==="—"?"":nt.fil+" · ")+esc(pv.glavno)
-               + (pv.dodatak?" · "+esc(pv.dodatak):"")+'</div>'; })() : '')
+               + esc(nt.fil==="—"?"":nt.fil+" · ")+esc(pv.nosac)
+               + (pv.kasete?" · SVE U KAŠETE":"")
+               + (pv.visina?" · 4 U VISINU":"")+'</div>'; })() : '')
       +   (preostaloN!=null
           ? '<div class="num" style="font-size:40px;font-weight:600;line-height:1.02;letter-spacing:-.03em'
             + (kasniN?";color:var(--bad)":";color:var(--good)")+'">'+odbroj(preostaloN)+'</div>'
