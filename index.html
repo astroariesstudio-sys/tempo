@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026e";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026f";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -958,6 +958,22 @@ function preveziSve(sm){
   for(i=0;i<z.length;i++) preveziNaloge(sm, z[i].t, z[i].zona);
 }
 function pocetakPara(tip){ return tip==="nalog_poc"||tip==="pauza"||tip==="cekanje"||tip==="drugi"; }
+/* Kad se dodirne zona ili vrsta unosa, kartica se iscrtava ponovo i polja bi ostala prazna.
+   Zato se upisano zapamti pre iscrtavanja i vrati posle njega. */
+var POLJA = ["dPoz","dFil","dOd","dDo","dKod","rVreme","rPoz","rKod","rzPoz","rzVreme"];
+var poljaCuvar = {};
+function zapamtiPolja(){
+  var i, e;
+  for(i=0;i<POLJA.length;i++){ e=document.getElementById(POLJA[i]); if(e) poljaCuvar[POLJA[i]]=e.value; }
+}
+function vratiPolja(){
+  var i, e;
+  for(i=0;i<POLJA.length;i++){
+    e=document.getElementById(POLJA[i]);
+    if(e && poljaCuvar[POLJA[i]]) e.value = poljaCuvar[POLJA[i]];
+  }
+}
+function iscrtajCuvajuci(){ zapamtiPolja(); render(); vratiPolja(); }
 /* "7:05", "07:05", "0705", "7.05" \u2014 sve isto; uvek na dan te smene. */
 function uVreme(sm, tekst){
   var t=String(tekst||"").trim().replace(/[.,\s-]/g,":");
@@ -2435,13 +2451,14 @@ document.addEventListener("click", function(ev){
   }
   /* ---- rucne ispravke toka dana ---- */
   if(a==="red"){
+    poljaCuvar={};
     redIzbor={p:parseInt(el.dataset.p,10), i:parseInt(el.dataset.i,10)};
     sheet="uredi-red"; render(); return;
   }
-  if(a==="red-odustani"){ redIzbor=null; sheet=null; render(); return; }
+  if(a==="red-odustani"){ poljaCuvar={}; redIzbor=null; sheet=null; render(); return; }
   if(a==="red-zona"){
     var rz=redIzbor?smenaPoPocetku(redIzbor.p):null;
-    if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; preveziSve(rz); save(); render(); }
+    if(rz && rz.dogadjaji[redIzbor.i]){ rz.dogadjaji[redIzbor.i].zona=el.dataset.z; preveziSve(rz); save(); iscrtajCuvajuci(); }
     return;
   }
   if(a==="red-sacuvaj"){
@@ -2467,7 +2484,7 @@ document.addEventListener("click", function(ev){
     if(kd5 && e5.tip==="cekanje") e5.kod=kd5.value.trim();
     sm5.dogadjaji.sort(function(x,y){return x.t-y.t;});
     preveziSve(sm5);
-    redIzbor=null; sheet=null; save(); render(); poruka("Ispravljeno");
+    poljaCuvar={}; redIzbor=null; sheet=null; save(); render(); poruka("Ispravljeno");
     return;
   }
   if(a==="red-zatvori"){
@@ -2501,11 +2518,12 @@ document.addEventListener("click", function(ev){
     return;
   }
   if(a==="dodaj-red"){
+    poljaCuvar={};
     redIzbor={p:parseInt(el.dataset.p,10), i:-1};
     dodajTip=el.dataset.t||"nalog"; dodajZona=null; sheet="dodaj-red"; render(); return;
   }
-  if(a==="dodaj-tip"){ dodajTip=el.dataset.t; render(); return; }
-  if(a==="dodaj-zona"){ dodajZona=el.dataset.z; render(); return; }
+  if(a==="dodaj-tip"){ dodajTip=el.dataset.t; iscrtajCuvajuci(); return; }
+  if(a==="dodaj-zona"){ dodajZona=el.dataset.z; iscrtajCuvajuci(); return; }
   if(a==="dodaj-potvrdi"){
     var sm8=redIzbor?smenaPoPocetku(redIzbor.p):null; if(!sm8) return;
     var od8=uVreme(sm8,(document.getElementById("dOd")||{}).value);
@@ -2571,7 +2589,7 @@ document.addEventListener("click", function(ev){
       por8="\u010cekanje dodato \u00b7 "+Math.round((do8-od8)/60000)+" min";
     }
     sm8.dogadjaji.sort(function(x,y){return x.t-y.t;});
-    redIzbor=null; sheet=null; save(); render(); poruka(por8);
+    poljaCuvar={}; redIzbor=null; sheet=null; save(); render(); poruka(por8);
     return;
   }
   if(a==="nalog-zona"){
