@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026m";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026n";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -984,8 +984,14 @@ function presek(sm, o){
     m = prazNeto(o.tl, o.tl.praz[i]);
     if(!najduzi || m>najduzi.min) najduzi={min:m, p:o.tl.praz[i]};
   }
-  if(o.pauMin>=0.5) stavke.push({ime:"Pauza", min:o.pauMin, poz:-uPoz(o.pauMin),
-    dodatak:(o.pauMin>(S.pauzaFond||60) ? cel(o.pauMin-(S.pauzaFond||60))+" min preko fonda" : "u fondu, ne mo\u017ee bez nje")});
+  if(o.pauMin>=0.5){
+    var fond = S.pauzaFond||60, preko = Math.max(0, o.pauMin-fond), uFondu = o.pauMin-preko;
+    stavke.push({ime:"Pauza", min:o.pauMin, poz:-uPoz(o.pauMin),
+      dodatak: preko>=0.5
+        ? cel(uFondu)+" min iz fonda je "+cel(uPoz(uFondu))+" poz \u2014 neizbe\u017eno \u00b7 "
+          + cel(preko)+" min preko fonda je "+cel(uPoz(preko))+" poz"
+        : "u fondu, ne mo\u017ee bez nje \u2014 ovo mora\u0161 da pokrije\u0161 tempom u nalozima"});
+  }
   if(o.prazMin>=0.5) stavke.push({ime:"Prazan hod", min:o.prazMin, poz:-uPoz(o.prazMin),
     dodatak:o.tl.praz.length+" zastoja"+(najduzi&&najduzi.min>=1?", najdu\u017ei "+cel(najduzi.min)+" min":"")});
   if(o.spremMin>=0.5) stavke.push({ime:"Odlaganje opreme", min:o.spremMin, poz:-uPoz(o.spremMin), dodatak:"kraj smene"});
