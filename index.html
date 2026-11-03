@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026j";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026k";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -2004,14 +2004,17 @@ function viewNorme(){
 
   h += '<div class="card"><div class="lbl">Podaci</div>'
     + '<div class="tiny muted" style="margin:5px 0 8px">Sve stoji samo u ovom telefonu. Kopiraj tekst ispod na sigurno mesto s vremena na vreme.</div>'
-    + '<textarea id="dump">'+esc(JSON.stringify({norme:S.norme,aktivne:S.aktivne,smeneDef:S.smeneDef,dani:S.dani,greske:S.greske}))+'</textarea>'
+    + '<textarea id="dump">'+esc(JSON.stringify({norme:S.norme,aktivne:S.aktivne,smeneDef:S.smeneDef,dani:S.dani,greske:S.greske,filijale:S.filijale}))+'</textarea>'
     + '<div class="row" style="margin-top:8px"><button class="btn ghost" style="flex:1;min-height:46px" data-act="kopiraj-sve">Kopiraj sve</button>'
     + '<button class="btn ghost" style="flex:1;min-height:46px" data-act="vrati">Vrati iz polja</button></div>'
     + '<div class="tiny muted" style="margin-top:6px">Za vraćanje: nalepi ranije kopiran tekst u polje iznad, pa dodirni Vrati. '
     + 'Tekst koji počinje sa {"dodaj": samo dodaje te dane, ostalo ne dira.</div></div>';
 
-  h += '<div class="tiny muted" style="text-align:center;margin:14px 0 2px">verzija '+VERZIJA_APP
-    +  ' · spisak filijala: '+Object.keys(S.filijale||{}).length+' šifara</div>';
+  var brSpisak=0, brDodate=0, fkk;
+  for(fkk in (S.filijale||{})){ if(SPISAK.indexOf(fkk)>=0) brSpisak++; else brDodate++; }
+  h += '<div class="tiny muted" style="text-align:center;margin:14px 0 2px">verzija <b>'+VERZIJA_APP+'</b></div>'
+    +  '<div class="tiny muted" style="text-align:center;margin-bottom:2px">filijale: '+brSpisak+' sa spiska'
+    +  (brDodate ? ' + '+brDodate+(brDodate===1?' dodata ručno':' dodate ručno') : '')+'</div>';
   h += '<button class="btn wide ghost" style="color:var(--bad)" data-act="brisi-sve">Obriši sve smene</button>'
     +  '<div class="tiny muted" style="margin-top:6px;text-align:center">Briše evidenciju rada sa ovog telefona. '
     +  'Norme, zone, smene i spisak filijala ostaju.</div>';
@@ -2804,6 +2807,10 @@ document.addEventListener("click", function(ev){
       }
       if(d.norme) S.norme=d.norme; if(d.aktivne) S.aktivne=d.aktivne;
       if(d.smeneDef) S.smeneDef=d.smeneDef; if(d.dani) S.dani=d.dani; if(d.greske) S.greske=d.greske;
+      /* iz kopije se vraćaju samo šifre koje je sam dodao — spisak sa papira ostaje kakav jeste */
+      if(d.filijale){
+        var dk; for(dk in d.filijale) if(S.filijale[dk]===undefined) S.filijale[dk]=d.filijale[dk];
+      }
       save(); render(); poruka("Vraćeno iz kopije");
     }catch(e){ poruka("Tekst nije ispravan"); }
     return;
