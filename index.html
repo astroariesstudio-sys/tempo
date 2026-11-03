@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026k";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026l";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -361,9 +361,7 @@ function pakovanje(kod){
   r.visina = !!(f & 2);
   r.vrsta  = r.kasete ? "kasete" : "pally";
   r.kako   = r.kasete ? "OBAVEZNO SVE U KAŠETE" : "";
-  r.napomena = r.kasete ? (NAPOMENA_FIL[n.kod] || "")
-                        : (n.vanSpiska ? "nije među poznatim šiframa — proveri je; kašete nisu obavezne"
-                                       : "kašete nisu obavezne");
+  r.napomena = r.kasete ? (NAPOMENA_FIL[n.kod] || "") : "kašete nisu obavezne";
   return r;
 }
 
@@ -2144,14 +2142,12 @@ function ovSheet(){
                      + 'color:var(--good)">'+esc(pk.kako)+'</div>' : '')
         +   (pk.visina ? '<div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:6px;'
                        + 'color:var(--bad)">4 U VISINU</div>' : '')
-        +   (pk.napomena ? '<div class="tiny'+(pk.nepoznat?'':' muted')+'" style="margin-top:10px'
-                         + (pk.nepoznat?';color:var(--bad);font-weight:700':'')+'">'
+        +   (pk.napomena ? '<div class="tiny muted" style="margin-top:10px">'
                          + esc(pk.napomena)+'</div>' : '')
+        +   (pk.nepoznat && pk.kod!=="—"
+              ? '<div class="tiny muted" style="margin-top:4px;opacity:.8">nije na spisku za kašete</div>'
+              : '')
         +  '</div>';
-      if(pk.nepoznat && pk.kod!=="—"){
-        h += '<button class="btn ghost wide" style="min-height:46px" data-act="fil-dodaj">'
-          +  'Dodaj '+esc(pk.kod)+' među poznate šifre</button>';
-      }
       if(pk.vrsta!=="ep"){
         var fv=(S.filijale&&S.filijale[pk.kod])||0;
         h += '<div class="tiny muted" style="text-align:center;margin-bottom:8px">ako se ne slaže sa spiskom, ispravi ovde</div>'
