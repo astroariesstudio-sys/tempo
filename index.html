@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026c";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026d";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -502,6 +502,7 @@ function zatvoriZaostalu(){
   if(Date.now() <= sm.kraj_plan + 60*60000) return;      // sat vremena tolerancije
   if(ceka(sm))    sm.dogadjaji.push({tip:"nastavak",   t:sm.kraj_plan});
   if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze", t:sm.kraj_plan});
+  if(naDrugom(sm))sm.dogadjaji.push({tip:"kraj_drugog",t:sm.kraj_plan});
   sm.kraj = sm.kraj_plan;
   sm.autoZatvorena = true;
   S.dani.push(sm);
@@ -780,6 +781,7 @@ function uStanju(sm, poc, kraj){
 }
 function ceka(sm){ return uStanju(sm,"cekanje","nastavak"); }
 function pauzira(sm){ return uStanju(sm,"pauza","kraj_pauze"); }
+function naDrugom(sm){ return uStanju(sm,"drugi","kraj_drugog"); }
 function odKada(sm, tip, kraj){
   var t=null;
   for(var i=0;i<sm.dogadjaji.length;i++){
@@ -1104,9 +1106,12 @@ function zavrsiSmenu(doKraja){
   var sm=S.smena; if(!sm) return;
   var sada=Date.now();
   var kraj = doKraja ? sm.kraj_plan : sada;
-  if(doKraja && sada < sm.kraj_plan) sm.dogadjaji.push({tip:"sprema", t:sada});
+  var jeDrg = naDrugom(sm);
+  /* ko je na drugom poslu ne sprema opremu — to vreme je van komisioniranja do kraja */
+  if(doKraja && sada < sm.kraj_plan && !jeDrg) sm.dogadjaji.push({tip:"sprema", t:sada});
   if(ceka(sm))    sm.dogadjaji.push({tip:"nastavak",   t:Math.min(sada,kraj)});
   if(pauzira(sm)) sm.dogadjaji.push({tip:"kraj_pauze", t:Math.min(sada,kraj)});
+  if(jeDrg)       sm.dogadjaji.push({tip:"kraj_drugog",t:kraj});
   sm.kraj = kraj;
   S.dani.push(sm); S.smena=null; sheet=null; save(); tab="dan"; render();
   poruka("Smena zatvorena");
@@ -1253,7 +1258,7 @@ function viewAktivna(){
   var isteklaSmena = Date.now() > sm.kraj_plan;
   var nijePocela   = Date.now() < sm.pocetak;
   var z=trenutnaZona(sm), h="", i;
-  var jeCekanje=ceka(sm), jePauza=pauzira(sm);
+  var jeCekanje=ceka(sm), jePauza=pauzira(sm), jeDrugi=naDrugom(sm);
 
   h += '<div class="stack">';
 
@@ -1266,6 +1271,16 @@ function viewAktivna(){
     h += '<div class="warn"><b>Smena je istekla u '+sat(sm.kraj_plan)+'.</b> '
       +  'Vreme se više ne broji. Zatvori je preko ⋯ → Završi smenu.</div>';
 
+  if(jeDrugi){
+    var odD=odKada(sm,"drugi","kraj_drugog");
+    h += '<div class="waitbox"><span class="dot"></span><div>'
+      +  '<div class="lbl" style="color:var(--bad)">Na drugom poslu</div>'
+      +  '<div class="n">'+kratko((sada-odD)/60000)+'</div></div>'
+      +  '<div class="sp"></div><div class="tiny muted" style="text-align:right">od '+sat(odD)
+      +  '<br>ne ulazi u fond</div></div>'
+      +  '<button class="btn main wide" style="min-height:54px" data-act="m-drugi">'
+      +  'Vratio sam se na komisioniranje</button>';
+  }
   if(jeCekanje){
     var od=odKada(sm,"cekanje","nastavak");
     var tek=null;
@@ -1600,9 +1615,12 @@ function viewDan(){
   var svi = sveSmene().slice().sort(function(a,b){ return b.pocetak-a.pocetak; });
   if(svi.length > 1){
     h += '<div class="row" style="flex-wrap:wrap;gap:6px">';
-    for(i=0;i<Math.min(svi.length,12);i++)
+    for(i=0;i<Math.min(svi.length,16);i++)
       h += '<button class="chip'+(svi[i].pocetak===sm.pocetak?" on":"")+'" data-act="izbor-dana" data-p="'+svi[i].pocetak+'">'
         +  datumTekst(svi[i].datum)+(svi[i].kraj?"":" •")+'</button>';
+    if(svi.length>16)
+      h += '<div class="tiny muted" style="width:100%;margin-top:2px">Stariji dan otvori\u0161 iz kartice '
+        +  '<b>Mesec</b> \u2014 dodirni datum u tabeli Smene.</div>';
     h += '</div>';
   }
 
@@ -1768,14 +1786,16 @@ function viewMesec(){
     + '<thead><tr><th>Dan</th><th>Minuti</th><th>Pozicije</th><th>Ostvareno</th><th>Razlika</th><th></th></tr></thead><tbody>';
   for(i=dani.length-1;i>=0;i--){
     var dd=dani[i];
-    h += '<tr><td>'+datumTekst(dd.sm.datum)+(dd.sm.kraj?"":" •")+'</td><td>'+cel(dd.o.ukMin)+'</td><td>'+cel(dd.o.ukPoz)+'</td>'
+    h += '<tr><td><button data-act="izbor-dana" data-p="'+dd.sm.pocetak+'" '
+      +  'style="background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline">'
+      +  datumTekst(dd.sm.datum)+'</button>'+(dd.sm.kraj?"":" •")+'</td><td>'+cel(dd.o.ukMin)+'</td><td>'+cel(dd.o.ukPoz)+'</td>'
       +  '<td>'+br(dd.o.ostvareni,0)+'</td><td class="'+kl(dd.o.razlika)+'">'+pct(dd.o.razlika)+'</td>'
       +  '<td>'+(dd.sm.kraj
             ? '<button class="x" data-act="brisi-dan" data-p="'+dd.sm.pocetak+'" aria-label="Obriši smenu">✕</button>'
             : '')+'</td></tr>';
   }
   h += '</tbody></table></div>'
-    +  '<div class="tiny muted" style="padding-top:8px">Smena sa tačkom je ona koja još traje. Krstićem brišeš probnu ili pogrešno upisanu.</div></div>';
+    +  '<div class="tiny muted" style="padding-top:8px">Dodirni datum da otvoriš i ispraviš taj dan — bilo koji, ne samo skorašnji. Smena sa tačkom je ona koja još traje. Krstićem brišeš probnu ili pogrešno upisanu.</div></div>';
 
   var mesNalogTempo = (uk.nalogMin>=1 && uk.ukPoz>0) ? uk.ukPoz/uk.nalogMin*60 : null;
   var prag = S.pragPrazan||5;
@@ -2003,6 +2023,8 @@ function ovSheet(){
     var sm=S.smena;
     h += '<div class="menu">'
       + mi("pauza", pauzira(sm)?"⏵":"⏸", pauzira(sm)?"Završi pauzu":"Počni pauzu", "")
+      + mi("drugi", naDrugom(sm)?"↩":"↗",
+            naDrugom(sm)?"Vratio sam se na komisioniranje":"Odlazim na drugi posao","")
       + mi("ispravi-zonu","⇄","Ispravi zonu — bio sam u drugoj","")
       + (uNalogu(sm) ? mi("prekini","⊘","Prekini nalog — nije dovršen","") : "")
       + mi("ponisti","↶","Poništi poslednji nalog","")
@@ -2608,6 +2630,13 @@ document.addEventListener("click", function(ev){
   if(a==="nastavi"){ dogadjaj("nastavak"); poruka("Nastavak rada"); return; }
   if(a==="meni"){ sheet="meni"; render(); return; }
   if(a==="m-pauza"){ sheet=null; dogadjaj(pauzira(S.smena)?"kraj_pauze":"pauza"); return; }
+  if(a==="m-drugi"){
+    sheet=null;
+    var bio=naDrugom(S.smena);
+    dogadjaj(bio?"kraj_drugog":"drugi");
+    poruka(bio?"Nazad na komisioniranju":"Drugi posao — vreme ne ulazi u fond");
+    return;
+  }
   if(a==="m-prekini"){
     sheet=null;
     var otv=null;
