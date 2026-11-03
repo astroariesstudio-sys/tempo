@@ -270,7 +270,7 @@ var SPISAK = [
 /* Potvrđeno sa Danielom 19.08.2026:
    plava (sve u kašete) = 1, crveno (4 u visinu) = 2, oboje = 3.
    J040 se ne vodi ovde — on je jedini sa spiska koji ide na EP, uz 4 u visinu. */
-var VERZIJA_APP = "03.11.2026n";   /* pise na dnu kartice Norme — da se vidi
+var VERZIJA_APP = "03.11.2026o";   /* pise na dnu kartice Norme — da se vidi
                                      da li je telefon povukao novu verziju */
 var FILIJALE_VERZIJA = 6;   /* 02.11.2026 — nema EP; spisak = 40 obaveznih kašeta */
 var DEF_FILIJALE = {
@@ -1357,7 +1357,16 @@ function viewAktivna(){
         +  '<span style="flex:1"><span class="lbl" style="display:block;color:var(--accent)">'
         +    (pola?"Polovina smene":"Pred kraj smene")+'</span>'
         +  '<span class="tiny muted">Pogledaj presek \u2014 \u0161ta ti donosi, \u0161ta odnosi, i koliko '
-        +  'pozicija je to.</span></span>'
+        +  'pozicija je to.</span>'
+        +  (pred ? '<span class="tiny" style="display:block;margin-top:7px;color:var(--bad);'
+                 + 'font-weight:800;letter-spacing:.05em">'
+                 + (o.tl.cek.length
+                     ? 'PRIJAVI DOPUNE I \u010cEKANJA</span>'
+                       + '<span class="tiny muted" style="display:block;margin-top:2px">'
+                       + o.tl.cek.length+(o.tl.cek.length===1?' \u010dekanje':' \u010dekanja')
+                       + ' \u00b7 '+cel(o.cekMin)+' min \u00b7 spisak sa \u0161iframa je ni\u017ee na ovom ekranu</span>'
+                     : 'NIJE BILO \u010cEKANJA \u2014 NEMA \u0160TA DA SE PRIJAVI</span>') : '')
+        +  '</span>'
         +  '<span style="color:var(--accent);font-size:20px">\u203a</span></button>';
   }
   if(jeDrugi){
